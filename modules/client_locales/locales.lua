@@ -59,10 +59,10 @@ function onGameStart()
 end
 
 function onExtendedLocales(protocol, opcode, buffer)
-    local locale = installedLocales[buffer]
-    if locale and setLocale(locale.name) then
-        g_modules.reloadModules()
-    end
+    -- local locale = installedLocales[buffer]
+    -- if locale and setLocale(locale.name) then
+    --     g_modules.reloadModules()
+    -- end
 end
 
 -- public functions
@@ -70,22 +70,23 @@ function init()
     installedLocales = {}
 
     installLocales('/locales')
+    setLocale(defaultLocaleName)
 
-    local userLocaleName = g_settings.get('locale', 'false')
-    if userLocaleName ~= 'false' and setLocale(userLocaleName) then
-        pdebug('Using configured locale: ' .. userLocaleName)
-    else
-        setLocale(defaultLocaleName)
-        if g_app.hasUpdater() then
-            connect(g_app, {
-                onUpdateFinished = createWindow,
-            })
-        else
-            connect(g_app, {
-                onRun = createWindow,
-            })
-        end
-    end
+    -- local userLocaleName = g_settings.get('locale', 'false')
+    -- if userLocaleName ~= 'false' and setLocale(userLocaleName) then
+    --     pdebug('Using configured locale: ' .. userLocaleName)
+    -- else
+    --     setLocale(defaultLocaleName)
+    --     if g_app.hasUpdater() then
+    --         connect(g_app, {
+    --             onUpdateFinished = createWindow,
+    --         })
+    --     else
+    --         connect(g_app, {
+    --             onRun = createWindow,
+    --         })
+    --     end
+    -- end
 
     ProtocolGame.registerExtendedOpcode(ExtendedIds.Locale, onExtendedLocales)
     connect(g_game, {
