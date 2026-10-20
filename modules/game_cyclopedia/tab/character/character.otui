@@ -179,7 +179,7 @@ UIWidget
       margin-left: 5  
       size: 34 34  
       icon-source: /game_cyclopedia/images/button_wheel  
-      @onClick: modules.game_wheel.toggle()
+      @onClick: if modules.game_wheel then modules.game_wheel.toggle() end
     BorderBox
       id: DetailsBase
       anchors.top: inventoryPanel.bottom
@@ -191,7 +191,7 @@ UIWidget
       margin-right: 5
       margin-bottom: 5
       height: 140
-      background-color: #363636
+      background-color: #1e1e1e
       UIScrollArea
         id: List
         vertical-scrollbar: ListScrollbar
@@ -875,7 +875,7 @@ UIWidget
         UIWidget
           anchors.fill: parent
           margin: 1
-          background-color: #363636
+          background-color: #1e1e1e
         Label
           !text: tr('Data and Time')
           anchors.top: parent.top
@@ -906,7 +906,7 @@ UIWidget
         margin: 1
         margin-top: 16
         padding-right: 15
-        background-color: #404040
+        background-color: #222222
         layout:
           type: verticalBox
           spacing: 3
@@ -971,7 +971,7 @@ UIWidget
         UIWidget
           anchors.fill: parent
           margin: 1
-          background-color: #363636
+          background-color: #1e1e1e
         Label
           !text: tr('Data and Time')
           anchors.top: parent.top
@@ -1017,7 +1017,7 @@ UIWidget
         margin: 1
         margin-top: 16
         padding-right: 15
-        background-color: #404040
+        background-color: #222222
         layout:
           type: verticalBox
           spacing: -1
@@ -1317,7 +1317,7 @@ UIWidget
         UIWidget
           anchors.fill: parent
           margin: 1
-          background-color: #363636
+          background-color: #1e1e1e
         Label
           !text: tr('Name')
           anchors.top: parent.top
@@ -1349,7 +1349,7 @@ UIWidget
         margin: 1
         margin-right: 15
         margin-top: 16
-        background-color: #404040
+        background-color: #222222
         layout:
           type: verticalBox
           spacing: 0
@@ -1563,7 +1563,7 @@ UIWidget
         margin: 1
 
         padding-right: 15
-        background-color: #404040
+        background-color: #222222
         layout:
           type: verticalBox
           spacing: 3

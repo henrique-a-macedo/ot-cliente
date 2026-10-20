@@ -12,7 +12,7 @@ BordedMiniWidget < UIWidget
     anchors.bottom: parent.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    background-color: #646464ff
+    background-color: #303030ff
     phantom: true
 
   UIWidget
@@ -20,7 +20,7 @@ BordedMiniWidget < UIWidget
     anchors.top: parent.top
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    background-color: #646464ff
+    background-color: #303030ff
     phantom: true
 
   UIWidget
@@ -51,21 +51,21 @@ CalendarDay < UICalendar
   UIWidget
     id: fill
     anchors.fill: parent
-    background-color: #484848ff
+    background-color: #262626ff
     phantom: true
 
     $on:
-      background-color: #484848ff
+      background-color: #262626ff
 
     $!on:
-      background-color: #414141ff
+      background-color: #232323ff
 
   UIWidget
     height: 2
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: parent.right
-    background-color: #646464ff
+    background-color: #303030ff
     phantom: true
 
   UIWidget
@@ -90,7 +90,7 @@ CalendarDay < UICalendar
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.bottom: parent.bottom
-    background-color: #646464ff
+    background-color: #303030ff
     phantom: true
 
   UIWidget
@@ -159,7 +159,7 @@ CalendarTopMark < UICalendar
   height: 14
   text-align: top
   text-offset: 0 -2
-  background-color: #363636ff
+  background-color: #1e1e1eff
 
   UIWidget
     height: 1
@@ -188,7 +188,7 @@ CalendarTopMark < UICalendar
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.bottom: parent.bottom
-    background-color: #646464ff
+    background-color: #303030ff
     opacity: 1
     $on:
       opacity: 1

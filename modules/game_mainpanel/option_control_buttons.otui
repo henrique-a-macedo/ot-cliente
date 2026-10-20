@@ -44,7 +44,7 @@ UIWidget
         margin-left: 10
         margin-right: 35
         vertical-scrollbar: displayedButtonsScrollBar
-        background-color: #404040
+        background-color: #222222
       VerticalQtScrollBar
         id: displayedButtonsScrollBar
         anchors.top: displayedButtonsList.top
@@ -125,7 +125,7 @@ UIWidget
         margin-left: 10
         margin-right: 35
         vertical-scrollbar: displayedButtonsScrollBar
-        background-color: #404040
+        background-color: #222222
       VerticalQtScrollBar
         id: displayedButtonsScrollBar
         anchors.top: prev.top

@@ -106,7 +106,8 @@ local function showSelectionList(data, tempValue, tempField, onSelectCallback)
             focused = 0
         end
     end
-    if data and #data > 0 then
+    -- auras/wings/effects need the removed game_attachedeffects module
+    if data and #data > 0 and modules.game_attachedeffects then
         for _, itemData in ipairs(data) do
             local button = g_ui.createWidget("SelectionButton", window.selectionList)
             button:setId(tostring(itemData[1]))
@@ -1114,7 +1115,7 @@ function showHealthBars()
             focused = 0
         end
     end
-    if ServerData.healthBars and #ServerData.healthBars > 0 then
+    if ServerData.healthBars and #ServerData.healthBars > 0 and modules.game_attachedeffects then
         for _, barData in ipairs(ServerData.healthBars) do
             local button = g_ui.createWidget("SelectionButton", window.selectionList)
             button:setId(barData)
@@ -1224,7 +1225,7 @@ function onPresetSelect(list, focusedChild, unfocusedChild, reason)
         updateAppearanceTexts(tempOutfit)
 
         updateAppearanceText("preset", preset.title)
-        if g_game.getFeature(GameWingsAurasEffectsShader) then
+        if g_game.getFeature(GameWingsAurasEffectsShader) and modules.game_attachedeffects then
             updateAppearanceText("aura", modules.game_attachedeffects.getName(preset.auras))
             updateAppearanceText("wings", modules.game_attachedeffects.getName(preset.wings))
             updateAppearanceText("shader", preset.shaders or "Outfit - Default")

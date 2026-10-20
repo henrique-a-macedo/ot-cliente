@@ -21,9 +21,4 @@ Panel
     padding: 2
     color: #ffffff
     font: verdana-11px-monochrome
-
-  UIParticles
-    id: particles
-    effect: background-effect
-    anchors.fill: parent
-    phantom: true
+    visible: false

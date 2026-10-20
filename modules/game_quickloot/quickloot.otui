@@ -13,7 +13,7 @@ RemoveBagButton < UIWidget
   $pressed:
     image-clip: 0 20 20 20
 QuicLootIgnoreItem < UIWidget
-  background-color: #484848
+  background-color: #262626
   Label
     id: label
     !text: tr('bag')
@@ -37,7 +37,7 @@ QuicLootIgnoreItem < UIWidget
     $pressed:
       opacity: 0.5
 QuicklootBagLabel < UIWidget
-  background-color: #484848
+  background-color: #262626
 
   Label
     id: label
@@ -308,7 +308,7 @@ Window
     vertical-scrollbar: ignoreScrollbar
     border-width: 1
     border-color: #00000077
-    background-color: #414141
+    background-color: #232323
     layout:
       type: grid
       cell-size: 244 38

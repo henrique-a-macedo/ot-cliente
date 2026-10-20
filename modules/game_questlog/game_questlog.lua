@@ -1275,7 +1275,7 @@ function questLogController:onInit()
     UITextList.questLogList = questLogController.ui.panelQuestLog.areaPanelQuestList.questList
     UITextList.questLogLine = questLogController.ui.panelQuestLineSelected.ScrollAreaQuestList.questList
     UITextList.questLogInfo = questLogController.ui.panelQuestLineSelected.panelQuestInfo.questList
-    UITextList.questLogInfo:setBackgroundColor('#363636')
+    UITextList.questLogInfo:setBackgroundColor('#1e1e1e')
 
     UITextEdit.search = questLogController.ui.panelQuestLog.textEditSearchQuest
     UIlabel.numberQuestComplete = questLogController:findWidget("#lblCompleteNumber")

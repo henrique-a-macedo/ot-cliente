@@ -708,7 +708,7 @@ function onParseStoreGetHistory(currentPage, pageCount, historyData)
     local transferHistory = controllerShop.ui.transferHistory.historyPanel
     transferHistory:destroyChildren()
     local headerRow = g_ui.createWidget("historyData2", transferHistory)
-    headerRow:setBackgroundColor("#363636")
+    headerRow:setBackgroundColor("#1e1e1e")
     headerRow:setBorderColor("#00000077")
     headerRow:setBorderWidth(1)
     headerRow.date:setText("Date")

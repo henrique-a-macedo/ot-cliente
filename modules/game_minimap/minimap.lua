@@ -5,15 +5,6 @@ local otmm = true
 local oldPos = nil
 local fullscreenWidget
 local virtualFloor = 7
-local currentDayTime = {
-    h = 12,
-    m = 0
-}
-
-local function refreshVirtualFloors()
-    mapController.ui.layersPanel.layersMark:setMarginTop(((virtualFloor + 1) * 4) - 3)
-    mapController.ui.layersPanel.automapLayers:setImageClip((virtualFloor * 14) .. ' 0 14 67')
-end
 
 local function onPositionChange()
     local player = g_game.getLocalPlayer()
@@ -37,77 +28,26 @@ local function onPositionChange()
 
     minimapWidget:setCrossPosition(pos)
     virtualFloor = pos.z
-    refreshVirtualFloors()
 end
 
 mapController = Controller:new()
 mapController:setUI('minimap', modules.game_interface.getMainRightPanel())
 
-function onChangeWorldTime(hour, minute)
---[[ 
-
-check 
-tfs c++ (old) : void ProtocolGame::sendWorldTime()
-tfs lua (new) : function Player.sendWorldTime(self, time)
-Canary: void ProtocolGame::sendTibiaTime(int32_t time)
- ]]
-
-    currentDayTime = {
-        h = hour % 24,
-        m = minute
-    }
-
-    mapController:scheduleEvent(function()
-        local nextH = currentDayTime.h
-        local nextM = currentDayTime.m + 12
-        if nextM >= 60 then
-            nextH = nextH + 1
-            nextM = nextM - 60
-        end
-
-        onChangeWorldTime(nextH, nextM)
-    end, 30000, 'dayTime')
-
-    local position = math.floor((124 / (24 * 60)) * ((hour * 60) + minute))
-    local mainWidth = 31
-    local secondaryWidth = 0
-
-    if (position + 31) >= 124 then
-        secondaryWidth = ((position + 31) - 124) + 1
-        mainWidth = 31 - secondaryWidth
-    end
-
-    mapController.ui.rosePanel.ambients.main:setWidth(mainWidth)
-    mapController.ui.rosePanel.ambients.secondary:setWidth(secondaryWidth)
-
-    if secondaryWidth == 0 then
-        mapController.ui.rosePanel.ambients.secondary:hide()
-    else
-        mapController.ui.rosePanel.ambients.secondary:setImageClip('0 0 ' .. secondaryWidth .. ' 31')
-        mapController.ui.rosePanel.ambients.secondary:show()
-    end
-
-    if mainWidth == 0 then
-        mapController.ui.rosePanel.ambients.main:hide()
-    else
-        mapController.ui.rosePanel.ambients.main:setImageClip(position .. ' 0 ' .. mainWidth .. ' 31')
-        mapController.ui.rosePanel.ambients.main:show()
-    end
-end
-
 function mapController:onInit()
-    self.ui.minimapBorder.minimap:getChildById('floorUpButton'):hide()
-    self.ui.minimapBorder.minimap:getChildById('floorDownButton'):hide()
-    self.ui.minimapBorder.minimap:getChildById('zoomInButton'):hide()
-    self.ui.minimapBorder.minimap:getChildById('zoomOutButton'):hide()
+    -- keep only the +/- and floor up/down buttons drawn over the map
     self.ui.minimapBorder.minimap:getChildById('resetButton'):hide()
+
+    local dragHandle = self.ui:getChildById('dragHandle')
+    dragHandle.onDragEnter = function()
+        return true
+    end
+    dragHandle.onDragLeave = function(widget, droppedWidget, mousePos)
+        modules.game_interface.setMinimapSide(mousePos.x < rootWidget:getWidth() / 2 and 'left' or 'right')
+        return true
+    end
 end
 
 function mapController:onGameStart()
-    mapController:registerEvents(g_game, {
-        onChangeWorldTime = onChangeWorldTime
-    })
-
     mapController:registerEvents(LocalPlayer, {
         onPositionChange = onPositionChange
     }):execute()
@@ -160,11 +100,7 @@ function zoomOut()
 end
 
 function openCyclopediaMap()
-    if g_game.getClientVersion() >= 1310 then
-        modules.game_cyclopedia.toggle('map')
-    else
-        return fullscreen()
-    end
+    return fullscreen()
 end
 
 function fullscreen()
@@ -209,7 +145,6 @@ function upLayer()
 
     mapController.ui.minimapBorder.minimap:floorUp(1)
     virtualFloor = virtualFloor - 1
-    refreshVirtualFloors()
 end
 
 function downLayer()
@@ -219,7 +154,6 @@ function downLayer()
 
     mapController.ui.minimapBorder.minimap:floorDown(1)
     virtualFloor = virtualFloor + 1
-    refreshVirtualFloors()
 end
 
 function onClickRoseButton(dir)
@@ -247,7 +181,6 @@ function resetMap()
     local player = g_game.getLocalPlayer()
     if player then
         virtualFloor = player:getPosition().z
-        refreshVirtualFloors()
     end
 end
 
@@ -261,9 +194,14 @@ function extendedView(extendedView)
             iconTopMenu = modules.client_topmenu.addTopRightToggleButton('miniMap', tr('Show miniMap'),
                 '/images/topbuttons/minimap', toggle)
             iconTopMenu:setOn(mapController.ui:isVisible())
-            mapController.ui:setBorderColor('black')
-            mapController.ui:setBorderWidth(2)
         end
+        local holder = modules.game_interface.getExtendedMinimapHolder()
+        mapController.ui:setParent(holder)
+        mapController.ui:fill('parent')
+        mapController.ui:getChildById('dragHandle'):show()
+        mapController.ui.minimapBorder:addAnchor(AnchorTop, 'dragHandle', AnchorBottom)
+        -- only the drag handle moves it here; dragging the window itself would drop it into a column
+        mapController.ui:setDraggable(false)
     else
         if iconTopMenu then
             iconTopMenu:destroy()
@@ -271,6 +209,11 @@ function extendedView(extendedView)
         end
         mapController.ui:setBorderColor('alpha')
         mapController.ui:setBorderWidth(0)
+        mapController.ui:breakAnchors()
+        mapController.ui:getChildById('dragHandle'):hide()
+        mapController.ui.minimapBorder:addAnchor(AnchorTop, 'parent', AnchorTop)
+        mapController.ui:setDraggable(true)
+        mapController.ui:setHeight(mapController.ui.panelHeight)
         local mainRightPanel = modules.game_interface.getMainRightPanel()
         if not mainRightPanel:hasChild(mapController.ui) then
             mainRightPanel:insertChild(1, mapController.ui)
@@ -289,4 +232,5 @@ function toggle()
         mapController.ui:show()
         iconTopMenu:setOn(true)
     end
+    modules.game_interface.setExtendedMinimapVisible(iconTopMenu:isOn())
 end

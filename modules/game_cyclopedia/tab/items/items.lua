@@ -670,7 +670,7 @@ function showItems()
         function ItemCat:onClick()
             Cyclopedia.ResetItemCategorySelection(UI.CategoryList)
             self:setChecked(true)
-            self:setBackgroundColor("#585858")
+            self:setBackgroundColor("#2c2c2c")
             Cyclopedia.onCategoryChange(self)
         end
 
@@ -896,7 +896,7 @@ function Cyclopedia.internalCreateItem(data)
             UI.InfoBase.ResultGoldBase.Rarity:setImageSource("")
             UI.SelectedItem.Rarity:setImageSource("")
         end
-        widget:setBackgroundColor("#585858")
+        widget:setBackgroundColor("#2c2c2c")
        
         if modules.game_quickloot.QuickLoot.data.filter == 2 then
             UI.InfoBase.quickLootCheck:setText("Loot when Quick Looting")
@@ -956,7 +956,7 @@ function Cyclopedia.internalCreateItem(data)
             function t_widget:onClick()
                 Cyclopedia.ResetItemCategorySelection(UI.InfoBase.SellBase.List)
                 self:setChecked(true)
-                self:setBackgroundColor("#585858")
+                self:setBackgroundColor("#2c2c2c")
             end
 
             sellColor = sellColor == "#484848" and "#414141" or "#484848"
@@ -977,7 +977,7 @@ function Cyclopedia.internalCreateItem(data)
             function t_widget:onClick()
                 Cyclopedia.ResetItemCategorySelection(UI.InfoBase.BuyBase.List)
                 self:setChecked(true)
-                self:setBackgroundColor("#585858")
+                self:setBackgroundColor("#2c2c2c")
             end
 
             buyColor = buyColor == "#484848" and "#414141" or "#484848"

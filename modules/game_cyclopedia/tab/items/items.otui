@@ -153,7 +153,7 @@ UIWidget
     anchors.top: ItemsLabel.bottom
     margin-top: 5
     size: 200 120
-    background-color: #414141
+    background-color: #232323
     border-width: 1
     border-color-bottom: #747575
     border-color-right: #747575
@@ -343,7 +343,7 @@ UIWidget
       anchors.right: parent.right
       margin-top: 5
       height: 140
-      background-color: #414141
+      background-color: #232323
       border-width: 1
       border-color-bottom: #747575
       border-color-right: #747575
@@ -376,7 +376,7 @@ UIWidget
       margin-top: 35
       margin-right: -5
       height: 100
-      background-color: #414141
+      background-color: #232323
       border-width: 1
       border-color-bottom: #747575
       border-color-right: #747575
@@ -414,7 +414,7 @@ UIWidget
       anchors.right: parent.right
       margin-left: 13
       height: 100
-      background-color: #414141
+      background-color: #232323
       border-width: 1
       border-color-bottom: #747575
       border-color-right: #747575

@@ -498,7 +498,7 @@ function Cyclopedia.loadCharacterRecentKills(data)
 
             function widget:onCheckChange()
                 if self:isChecked() then
-                    self:setBackgroundColor("#585858")
+                    self:setBackgroundColor("#2c2c2c")
                 else
                     self:setBackgroundColor(self.color)
                 end
@@ -547,7 +547,7 @@ function Cyclopedia.loadCharacterRecentDeaths(data)
 
             function widget:onCheckChange()
                 if self:isChecked() then
-                    self:setBackgroundColor("#585858")
+                    self:setBackgroundColor("#2c2c2c")
                 else
                     self:setBackgroundColor(self.color)
                 end

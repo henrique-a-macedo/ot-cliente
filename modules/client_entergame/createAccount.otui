@@ -570,7 +570,7 @@ MainWindow
 
       TextList
         id: textListAllWorlds
-        background-color: #404040
+        background-color: #222222
         anchors.top: prev.bottom
         anchors.left: parent.left
         anchors.bottom: parent.bottom
@@ -588,7 +588,7 @@ MainWindow
       MiniPanel
         id: worldInfo
         text: World Name
-        background-color: #404040
+        background-color: #222222
         anchors.top: panelSelectworldAndPvp.bottom
         anchors.left: textListAllWorlds.right
         anchors.right: parent.right

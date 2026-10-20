@@ -177,9 +177,9 @@ UIWidget
             cell-spacing: 2
             flow: true
           CharmCreatureName
-            background-color: #484848
+            background-color: #262626
           CharmCreatureName
-            background-color: #414141
+            background-color: #232323
         VerticalQtScrollBar
           id: CreatureListScrollbar
           anchors.top: parent.top
@@ -335,7 +335,7 @@ UIWidget
         padding: 1
         width: 10
         focusable: true
-        background-color: #404040
+        background-color: #222222
         border-width: 1
         border-color: #272727
         padding: 1

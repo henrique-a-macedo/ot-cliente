@@ -40,8 +40,6 @@ function extendedView(extendedView)
             iconTopMenu = modules.client_topmenu.addTopRightToggleButton('healthMana', tr('Show health'),
                 '/images/topbuttons/healthinfo', toggle)
             iconTopMenu:setOn(healthManaController.ui:isVisible())
-            healthManaController.ui:setBorderColor('black')
-            healthManaController.ui:setBorderWidth(2)
         end
     else
         if iconTopMenu then

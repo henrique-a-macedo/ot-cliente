@@ -48,9 +48,6 @@ local buttons = { {
     }, {
         text = "Console",
         open = "interfaceConsole"
-    }, {
-        text = "Action Bars",
-        open = "actionbars"
     } }
 }, {
     text = "Graphics",

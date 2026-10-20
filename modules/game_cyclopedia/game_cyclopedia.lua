@@ -10,9 +10,6 @@ local buttonSelection = nil
 local items = nil
 local bestiary = nil
 local charms = nil
-local map = nil
-local houses = nil
-local character = nil
 local CyclopediaButton = nil
 local bosstiary = nil
 local bossSlot = nil
@@ -21,7 +18,6 @@ local ButtonBestiary = nil
 local tabStack = {}
 local previousType = nil
 local windowTypes = {}
-local magicalArchives = nil
 function toggle(defaultWindow)
     if not controllerCyclopedia.ui then
         return
@@ -67,23 +63,15 @@ function controllerCyclopedia:onGameStart()
         items = buttonSelection:recursiveGetChildById('items')
         bestiary = buttonSelection:recursiveGetChildById('bestiary')
         charms = buttonSelection:recursiveGetChildById('charms')
-        map = buttonSelection:recursiveGetChildById('map')
-        houses = buttonSelection:recursiveGetChildById('houses')
-        character = buttonSelection:recursiveGetChildById('character')
         bosstiary = buttonSelection:recursiveGetChildById('bosstiary')
         bossSlot = buttonSelection:recursiveGetChildById('bossSlot')
-        magicalArchives = buttonSelection:recursiveGetChildById('magicalArchives')
 
         windowTypes = {
             items = { obj = items, func = showItems },
             bestiary = { obj = bestiary, func = showBestiary },
             charms = { obj = charms, func = showCharms },
-            map = { obj = map, func = showMap },
-            houses = { obj = houses, func = showHouse },
-            character = { obj = character, func = showCharacter },
             bosstiary = { obj = bosstiary, func = showBosstiary },
             bossSlot = { obj = bossSlot, func = showBossSlot },
-            magicalArchives = { obj = magicalArchives, func = showMagicalArchives },
         }
 
         g_ui.importStyle("cyclopedia_widgets")
@@ -446,7 +434,7 @@ function SelectWindow(type, isBackButtonPress)
         end
     end
     if CyclopediaButton then
-        CyclopediaButton:setOn(type == "items" or type == "charms" or type == "map" or type == "houses" or type == "character" or type == "magicalArchives")
+        CyclopediaButton:setOn(type == "items" or type == "charms")
     end
     if ButtonBossSlot then
         ButtonBossSlot:setOn(type == "bossSlot")

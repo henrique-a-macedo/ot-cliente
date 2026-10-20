@@ -928,7 +928,7 @@ function onBuyListValueChange(scroll, value, delta)
             widget.endAt:setColor(count > 0 and "#c0c0c0" or "#808080")
 
             if index == cache.SCROLL_BUY_OFFERS.lastSelected then
-                widget:setBackgroundColor('#585858')
+                widget:setBackgroundColor('#2c2c2c')
                 widget.piecePrice:setColor("#f4f4f4")
                 widget.totalPrice:setColor("#f4f4f4")
                 widget.name:setColor("#f4f4f4")
@@ -987,7 +987,7 @@ function onSellListValueChange(scroll, value, delta)
             widget.endAt:setColor(hasMoney and "#c0c0c0" or "#808080")
 
             if index == cache.SCROLL_SELL_OFFERS.lastSelected then
-                widget:setBackgroundColor('#585858')
+                widget:setBackgroundColor('#2c2c2c')
                 widget.piecePrice:setColor("#f4f4f4")
                 widget.totalPrice:setColor("#f4f4f4")
                 widget.name:setColor("#f4f4f4")
@@ -1103,7 +1103,7 @@ function onSelectChildCategory(widget, selected, keepFilter)
     end
 
     lastSelectedCategory = selected
-    selected:setBackgroundColor('#585858')
+    selected:setBackgroundColor('#2c2c2c')
     selected:setColor('#f4f4f4')
 
     isRebuildingCategory = true
@@ -1190,7 +1190,7 @@ function onSelectChildCategory(widget, selected, keepFilter)
             widget.name:setTooltip(itemInfo.marketData.name)
         end
 
-        widget:setBackgroundColor('#363636')
+        widget:setBackgroundColor('#1e1e1e')
         widget.item:getItem():setCount(count)
         widget.item.itemIndex = i
         widget.item:setTooltip(tr("%s%s%s%s", comma_value(count), "x", (count > 65000 and "+ " or " "),
@@ -1282,14 +1282,14 @@ function onSelectChildItem(widget, selected, oldFocus)
     end
 
     if oldFocus then
-        oldFocus:setBackgroundColor('#363636')
+        oldFocus:setBackgroundColor('#1e1e1e')
     end
 
     if lastSelectedItem.lastWidget then
-        lastSelectedItem.lastWidget:setBackgroundColor('#363636')
+        lastSelectedItem.lastWidget:setBackgroundColor('#1e1e1e')
     end
 
-    selected:setBackgroundColor('#585858')
+    selected:setBackgroundColor('#2c2c2c')
     local itemID = selected.item:getItemId()
     local itemTier = selected.item:getItem():getTier()
 
@@ -1410,7 +1410,7 @@ function onSelectSellOffer(widget, selected, oldFocus)
         oldFocus.endAt:setColor(color)
     end
 
-    selected:setBackgroundColor('#585858')
+    selected:setBackgroundColor('#2c2c2c')
     selected.piecePrice:setColor("#f4f4f4")
     selected.totalPrice:setColor("#f4f4f4")
     selected.name:setColor("#f4f4f4")
@@ -1475,7 +1475,7 @@ function onSelectBuyOffer(widget, selected, oldFocus)
         oldFocus.endAt:setColor(color)
     end
 
-    selected:setBackgroundColor('#585858')
+    selected:setBackgroundColor('#2c2c2c')
     selected.piecePrice:setColor("#f4f4f4")
     selected.totalPrice:setColor("#f4f4f4")
     selected.name:setColor("#f4f4f4")
@@ -1989,7 +1989,7 @@ function onSearchItem(textField)
             widget.name:setTooltip(itemInfo.marketData.name)
         end
 
-        widget:setBackgroundColor('#363636')
+        widget:setBackgroundColor('#1e1e1e')
         widget.item:getItem():setCount(count)
         widget.item.itemIndex = i -- Store item index as property
         widget.item:setTooltip(tr("%s%s%s%s", comma_value(count), "x", (count > 65000 and "+ " or " "),
@@ -2134,7 +2134,7 @@ function onShowRedirect(item)
             widget.name:setTooltip(itemInfo.marketData.name)
         end
 
-        widget:setBackgroundColor('#363636')
+        widget:setBackgroundColor('#1e1e1e')
         widget.item:getItem():setCount(count)
         widget.item.itemIndex = i
         widget.item:setTooltip(tr("%s%s%s%s", comma_value(count), "x", (count > 65000 and "+ " or " "),

@@ -323,15 +323,8 @@ PhantomMiniWindow < UIMiniWindow
   phantom: false
   focusable: false
   &moveOnlyToMain: true
-
-  UIWidget
-    image-source: /images/ui/background
-    image-repeated: true
-    anchors.fill: parent
-    margin-left: 3
-    margin-right: 3
-    phantom: true
-    opacity: 0.6
+  // same dark tone as the rest of the UI, so inventory/health/minimap read as one block over the map
+  background-color: #1a1a1a
 
   UIWidget
     id: miniwindowTopBar

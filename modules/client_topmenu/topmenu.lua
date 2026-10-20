@@ -519,10 +519,5 @@ function extendedView(extendedView)
         topMenu:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
         modules.game_interface.getRootPanel():addAnchor(AnchorTop, 'parent', AnchorTop)
         topMenu:setWidth(1020)
-        topMenu.topLeftDiscord:setWidth(110)
-        topMenu.topLeftYoutube:setWidth(100)
-        topMenu.topLeftOnlinePlayers:show()
-        topMenu.topLeftDiscord:show()
-        topMenu.topLeftYoutube:show()
     end
 end

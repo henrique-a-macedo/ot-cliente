@@ -10,7 +10,7 @@ MainWindow
     anchors.top: parent.top
     anchors.left: parent.left
     size: 668 36
-    background-color: #404040
+    background-color: #222222
     border-width-top: 1
     border-color-top: black
     border-width-left: 1
@@ -88,72 +88,6 @@ MainWindow
         image-source: /images/game/cyclopedia/charms_off
 
     UIButton
-      id: map
-      anchors.top: prev.top
-      anchors.left: prev.right
-      margin-left: 1
-      @onClick: SelectWindow("map")
-
-      $on:
-        size: 150 34
-        image-clip: 0 0 150 34
-        image-source: /images/game/cyclopedia/map_on
-
-      $!on:
-        size: 34 34
-        image-clip: 0 0 34 34
-        image-source: /images/game/cyclopedia/map_off
-
-      $pressed:
-        size: 34 34
-        image-clip: 0 34 34 34
-        image-source: /images/game/cyclopedia/map_off
-
-    UIButton
-      id: houses
-      anchors.top: prev.top
-      anchors.left: prev.right
-      margin-left: 1
-      @onClick: SelectWindow("houses")
-
-      $on:
-        size: 150 34
-        image-clip: 0 0 150 34
-        image-source: /images/game/cyclopedia/houses_on
-
-      $!on:
-        size: 34 34
-        image-clip: 0 0 34 34
-        image-source: /images/game/cyclopedia/houses_off
-
-      $pressed:
-        size: 34 34
-        image-clip: 0 34 34 34
-        image-source: /images/game/cyclopedia/houses_off
-
-    UIButton
-      id: character
-      anchors.top: prev.top
-      anchors.left: prev.right
-      margin-left: 1
-      @onClick: SelectWindow("character")
-
-      $on:
-        size: 150 34
-        image-clip: 0 0 150 34
-        image-source: /images/game/cyclopedia/character_on
-
-      $!on:
-        size: 34 34
-        image-clip: 0 0 34 34
-        image-source: /images/game/cyclopedia/character_off
-
-      $pressed:
-        size: 34 34
-        image-clip: 0 34 34 34
-        image-source: /images/game/cyclopedia/character_off
-
-    UIButton
       id: bosstiary
       anchors.top: prev.top
       anchors.left: prev.right
@@ -197,28 +131,6 @@ MainWindow
         image-clip: 0 34 34 34
         image-source: /images/game/cyclopedia/bossSlot_off
 
-    UIButton
-      id: magicalArchives
-      anchors.top: prev.top
-      anchors.left: prev.right
-      margin-left: 1
-      @onClick: SelectWindow("magicalArchives")
-
-      $on:
-        size: 150 34
-        image-clip: 0 0 150 34
-        image-source: /images/game/cyclopedia/magical_on
-
-      $!on:
-        size: 34 34
-        image-clip: 0 0 34 34
-        image-source: /images/game/cyclopedia/magical_off
-
-      $pressed:
-        size: 34 34
-        image-clip: 0 34 34 34
-        image-source: /images/game/cyclopedia/magical_off
-        
   UIWidget
     id: contentContainer
     anchors.top: prev.bottom

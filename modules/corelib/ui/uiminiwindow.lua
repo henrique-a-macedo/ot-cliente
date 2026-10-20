@@ -266,13 +266,20 @@ function UIMiniWindow:onDragLeave(droppedWidget, mousePos)
     return true
 end
 
+-- mirrors the refusal rule in UIMiniWindowContainer:onDrop
+local function containerAcceptsDrop(container, widget)
+    return not ((container.onlyPhantomDrop and not widget.moveOnlyToMain) or
+        (widget.moveOnlyToMain and not container.onlyPhantomDrop))
+end
+
 function UIMiniWindow:onDragMove(mousePos, mouseMoved)
     local oldMousePosY = mousePos.y - mouseMoved.y
     local children = rootWidget:recursiveGetChildrenByMarginPos(mousePos)
     local overAnyWidget = false
     for i = 1, #children do
         local child = children[i]
-        if child:getParent():getClassName() == 'UIMiniWindowContainer' then
+        local container = child:getParent()
+        if container:getClassName() == 'UIMiniWindowContainer' and containerAcceptsDrop(container, self) then
             overAnyWidget = true
 
             local childCenterY = child:getY() + child:getHeight() / 2

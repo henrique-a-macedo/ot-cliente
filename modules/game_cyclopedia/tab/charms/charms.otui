@@ -150,9 +150,9 @@ UIWidget
           cell-spacing: 2
           flow: true
         CharmCreatureName
-          background-color: #484848
+          background-color: #262626
         CharmCreatureName
-          background-color: #414141
+          background-color: #232323
       VerticalScrollBar
         id: CreatureListScrollbar
         anchors.top: parent.top

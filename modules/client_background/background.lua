@@ -16,12 +16,6 @@ function init()
                                    g_app.getBuildDate() .. '\n' .. g_app.getBuildCompiler() .. ' - ' ..
                                    g_app.getBuildArch())
 
-    if not g_game.isOnline() then
-        addEvent(function()
-            g_effects.fadeIn(clientVersionLabel, 1500)
-        end)
-    end
-
     connect(g_game, {
         onGameStart = hide
     })

@@ -27,7 +27,7 @@ MainWindow
     margin-top: 5
     focusable: false
     vertical-scrollbar: channelsScrollBar
-    background-color: #404040
+    background-color: #222222
 
   VerticalScrollBar
     id: channelsScrollBar

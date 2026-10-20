@@ -62,11 +62,7 @@ local function setupUIButtons()
     
     local newWindowButton = skillsWindow:recursiveGetChildById('newWindowButton')
     if newWindowButton then
-        newWindowButton.onClick = function()
-            if modules.game_cyclopedia then
-                modules.game_cyclopedia.show("character")
-            end
-        end
+        newWindowButton:hide()
     end
 end
 

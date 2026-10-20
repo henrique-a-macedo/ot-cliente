@@ -211,7 +211,7 @@ MiniWindow
     UIGraph
       id: graphDpsPanel
       capacity: 400
-      background-color: #383636
+      background-color: #1f1f1f
       color: red
       size: 129 83
       show-labels: false
@@ -414,7 +414,7 @@ MiniWindow
     UIGraph
       id: graphHealPanel
       capacity: 400
-      background-color: #383636
+      background-color: #1f1f1f
       color: red
       size: 129 83
       show-labels: false

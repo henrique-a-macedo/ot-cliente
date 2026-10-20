@@ -73,13 +73,12 @@ if ENABLE_SERVERS then
         -- @field httpLogin Enables HTTP-based login on the server
         -- @field useAuthenticator Enables additional authentication layer
         --
-        ["http://127.0.0.1/login.php"] = {
-            port = 80,
-            protocol = 1511,
+        ["http://127.0.0.1:8080"] = {
+            port = 8080,
+            protocol = 1310,
             httpLogin = true,
             useAuthenticator = false
-        },
-
+        }
         -- External server
         ---
         -- Configuration for external server ip.net.
@@ -89,11 +88,6 @@ if ENABLE_SERVERS then
         -- @field protocol Protocol identifier used by the server
         -- @field httpLogin Indicates if the server allows HTTP login
         --
-        ["ip.net"] = {
-            port = 7171,
-            protocol = 860,
-            httpLogin = false
-        }
     }
 end
 

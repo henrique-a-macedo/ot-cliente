@@ -254,6 +254,7 @@ function consoleController:onInit()
     end, consolePanel)
   
     g_keyboard.bindKeyDown('Enter', switchChatOnCall, consolePanel)
+    g_keyboard.bindKeyDown('Enter', openChatPanelOnCall, modules.game_interface.getRootPanel())
     g_keyboard.bindKeyDown('Escape', disableChatOnCall, consolePanel)
     g_keyboard.bindKeyPress('Ctrl+A', function()
         consoleTextEdit:clearText()
@@ -428,8 +429,106 @@ function switchChat(enabled)
     end
 end
 
+-- extended view chat:
+--  * panel hidden: Enter opens it already typing; an empty Enter (or Escape) hides it again
+--  * panel opened to stay (map chat button): Enter starts typing; an empty Enter only stops typing
+local function isChatPanelToggleable()
+    return modules.game_interface.currentViewMode == 2
+end
+
+local chatOpenedByEnter = false
+-- the chat panel and the game screen both listen to Enter; only the first one handles a key press
+local enterHandled = false
+
+local function markEnterHandled()
+    enterHandled = true
+    addEvent(function()
+        enterHandled = false
+    end)
+end
+
+local function startTyping()
+    if not isChatEnabled() then
+        toggleChat()
+    end
+    consoleTextEdit:focus()
+end
+
+local function stopTyping()
+    walkAfterSend = false
+    if isChatEnabled() then
+        toggleChat()
+    end
+end
+
+-- opens the panel to stay open (map chat button)
+function showChatPanel()
+    if not isChatPanelToggleable() then
+        return
+    end
+    -- the map chat buttons exist exactly while the panel is hidden (incl. transparent mode)
+    if extendedViewButtonToggleChat then
+        extendedViewHide(false)
+    end
+    chatOpenedByEnter = false
+end
+
+function closeChatPanel()
+    if not isChatPanelToggleable() then
+        return
+    end
+    stopTyping()
+    if not extendedViewButtonToggleChat then
+        extendedViewHide(true)
+    end
+    chatOpenedByEnter = false
+end
+
+local function onExtendedViewEnter()
+    if enterHandled then
+        return
+    end
+    markEnterHandled()
+
+    if extendedViewButtonToggleChat then
+        extendedViewHide(false)
+        chatOpenedByEnter = true
+        startTyping()
+        return
+    end
+
+    if not isChatEnabled() or not consoleTextEdit:isFocused() then
+        startTyping()
+        return
+    end
+
+    if consoleTextEdit:getText() ~= '' then
+        return -- the "Send current chat line" binding sends it
+    end
+
+    if chatOpenedByEnter then
+        closeChatPanel()
+    else
+        stopTyping()
+    end
+end
+
+function openChatPanelOnCall()
+    if not g_game.isOnline() or modules.game_hotkeys.areHotkeysDisabled() then
+        return
+    end
+    if isChatPanelToggleable() then
+        onExtendedViewEnter()
+    end
+end
+
 function switchChatOnCall()
     if not g_game.isOnline() or modules.game_hotkeys.areHotkeysDisabled() then
+        return
+    end
+
+    if isChatPanelToggleable() then
+        onExtendedViewEnter()
         return
     end
 
@@ -459,6 +558,15 @@ function disableChatOnCall()
         return
     end
 
+    if isChatPanelToggleable() then
+        if chatOpenedByEnter or extendedViewButtonToggleChat then
+            closeChatPanel()
+        else
+            stopTyping()
+        end
+        return
+    end
+
     if isChatEnabled() and not consoleToggleChat.isChecked then
         toggleChat()
     end
@@ -470,6 +578,7 @@ end
 
 function consoleController:onTerminate()
     save()
+    g_keyboard.unbindKeyDown('Enter', openChatPanelOnCall, modules.game_interface.getRootPanel())
     Keybind.delete("Chat Channel", "Close Current Channel")
     Keybind.delete("Chat Channel", "Next Channel")
     Keybind.delete("Chat Channel", "Previous Channel")
@@ -2434,6 +2543,9 @@ function setExtendedView(bool)
         consolePanel:getChildById('extendedViewDraggable'):show()
         consolePanel:getChildById('extendedViewHide'):show()
         consolePanel:getChildById('extendedViewHide'):setChecked(not gameBottomPanel:isVisible())
+        -- start with the chat visible but not typing, so WASD walks right away
+        showChatPanel()
+        stopTyping()
     else
         consolePanel:setMarginRight(0)
         consolePanel:setMarginBottom(0)
@@ -2551,7 +2663,11 @@ function createButtonChat()
     end
     extendedViewButtonToggleChat:addAnchor(AnchorBottom, "parent", AnchorBottom)
     extendedViewButtonToggleChat.onClick = function(a, b)
-        extendedViewHide(modules.game_interface.currentViewMode ~= 2)
+        if modules.game_interface.currentViewMode == 2 then
+            showChatPanel()
+        else
+            extendedViewHide(true)
+        end
     end
     extendedViewButtonShowAlphaChat = g_ui.createWidget(stringNameMobileOrPc, mapPanel)
     extendedViewButtonShowAlphaChat:setIcon("/images/game/npcicons/icon_chat")

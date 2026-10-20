@@ -284,7 +284,7 @@ function MarketHistory.onSelectHistoryChild(widget, selected, selling)
         lastSelectedHistoryBuy = selected
     end
 
-    selected:setBackgroundColor('#585858')
+    selected:setBackgroundColor('#2c2c2c')
     selected.piecePrice:setColor("#f4f4f4")
     selected.totalPrice:setColor("#f4f4f4")
     selected.name:setColor("#f4f4f4")

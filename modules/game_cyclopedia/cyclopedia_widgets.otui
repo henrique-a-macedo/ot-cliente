@@ -1097,10 +1097,10 @@ BestiaryItemGroup < UIWidget
     text-auto-resize: true
 CharmCreatureName < UICheckBox
   color: #C0C0C0
-  background-color: #484848
+  background-color: #262626
   @onClick: modules.game_cyclopedia.Cyclopedia.selectCreatureCharm(self, self:isChecked())
   $checked:
-    background-color: #585858
+    background-color: #2c2c2c
 	
 InventoryItemCyclopedia < Item
 HeadSlot < InventoryItemCyclopedia

@@ -1,9 +1,11 @@
 Button < UIButton
   font: cipsoftFont
-  color: #dfdfdfff
+  color: #f2f2f2ff
   size: 43 20
   text-offset: 0 2
   image-source: /images/ui/buttons
+  // dark theme texture (~#2c2c2c); slightly dimmed at rest so hover can brighten it
+  image-color: #c8c8c8
   image-clip: 0 0 43 20
   image-border: 1
   padding: 10
@@ -12,6 +14,7 @@ Button < UIButton
 
   $hover !disabled:
     image-clip: 0 0 43 20
+    image-color: #ffffff
 
   $pressed:
     image-clip: 0 20 43 20
@@ -26,8 +29,8 @@ Button < UIButton
     text-offset: 1 1
 
   $disabled:
-    color: #dfdfdf88
-    opacity: 0.8
+    color: #9a9a9a
+    opacity: 1.0
     change-cursor-image: false
 
 TabButton < UIButton

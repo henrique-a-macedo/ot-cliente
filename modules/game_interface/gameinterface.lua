@@ -79,6 +79,10 @@ function setSidePanelVisible(panel, visible)
     if not panel then
         return
     end
+    -- extended view always shows the four columns (the minimap holder spans two of them)
+    if currentViewMode == 2 then
+        return
+    end
 
     if not visible then
         -- windows parked in a hidden panel are unreachable, move them back
@@ -157,6 +161,17 @@ function init()
     gameRightExtraPanel = gameRootPanel:getChildById('gameRightExtraPanel')
     gameLeftExtraPanel = gameRootPanel:getChildById('gameLeftExtraPanel')
     gameLeftPanel = gameRootPanel:getChildById('gameLeftPanel')
+
+    -- a column that gets shorter (minimap moved, main panel resized) must close what no longer fits
+    for _, column in ipairs({ gameLeftPanel, gameLeftExtraPanel, gameRightPanel, gameRightExtraPanel }) do
+        column.onGeometryChange = function(self, oldRect, newRect)
+            if newRect.height < oldRect.height then
+                addEvent(function()
+                    self:fitAll()
+                end)
+            end
+        end
+    end
     gameBottomPanel = gameRootPanel:getChildById('gameBottomPanel')
     gameTopPanel = gameRootPanel:getChildById('gameTopPanel')
     gameBottomStatsBarPanel = gameRootPanel:getChildById('gameBottomStatsBarPanel')
@@ -226,13 +241,6 @@ end
 function bindKeys()
     gameRootPanel:setAutoRepeatDelay(50)
 
-    g_keyboard.bindKeyPress('Ctrl+=', function()
-        gameMapPanel:zoomIn()
-    end, gameRootPanel)
-    g_keyboard.bindKeyPress('Ctrl+-', function()
-        gameMapPanel:zoomOut()
-    end, gameRootPanel)
-
     Keybind.new("Movement", "Stop All Actions", "Escape", "", true)
     Keybind.bind("Movement", "Stop All Actions", {
         {
@@ -263,8 +271,6 @@ function bindKeys()
             end,
         }
     }, gameRootPanel)
-
-    g_keyboard.bindKeyDown('Ctrl+.', nextViewMode, gameRootPanel)
 end
 
 function terminate()
@@ -1305,15 +1311,8 @@ function processMouseAction(menuPosition, mouseButton, autoWalkPos, lookThing, u
                             -- For pickupable containers like quivers, backpacks, etc., open them instead of quicklooting
                             g_game.open(useThing)
                             return true
-                        elseif table.find({ 3497, 3498, 3499, 3500, 3502, 12902 }, useThing:getId()) then
-                            -- For depot chests, lockers, depot boxes, inbox, etc., always open them
-                            g_game.open(useThing)
-                            return true
-                        elseif g_game.getFeature(GameThingQuickLoot) and modules.game_quickloot then
-                            -- For containers in the world, quickloot
-                            g_game.sendQuickLoot(1, useThing)
-                            return true
                         else
+                            -- the server does not handle quick loot (0x8F), so right click opens corpses like in 8.6
                             g_game.open(useThing)
                             return true
                         end
@@ -1837,13 +1836,10 @@ function setupViewMode(mode)
             height = 11
         })
     elseif mode == 2 then
-        local limit = limitedZoom and not g_game.isGM()
-        gameMapPanel:setLimitVisibleRange(limit)
-        gameMapPanel:setZoom(11)
-        gameMapPanel:setVisibleDimension({
-            width = 15,
-            height = 11
-        })
+        -- extended view: 15 tiles high, width follows the screen ratio (27 on 16:9; server sends a 14x8 viewport)
+        gameMapPanel:setKeepAspectRatio(false)
+        gameMapPanel:setLimitVisibleRange(false)
+        gameMapPanel:setZoom(15)
         gameMapPanel:fill('parent')
         gameRootPanel:fill('parent')
         gameLeftPanel:setImageColor('alpha')
@@ -1853,12 +1849,13 @@ function setupViewMode(mode)
         gameLeftPanel:setOn(true)
         gameLeftPanel:setVisible(true)
         gameRightPanel:setOn(true)
-        gameRightExtraPanel:setOn(false)
-        gameRightExtraPanel:setVisible(false)
-        gameLeftExtraPanel:setOn(false)
-        gameLeftExtraPanel:setVisible(false)
+        -- two columns on each side
+        gameRightExtraPanel:setOn(true)
+        gameRightExtraPanel:setVisible(true)
+        gameLeftExtraPanel:setOn(true)
+        gameLeftExtraPanel:setVisible(true)
         gameMapPanel:setOn(true)
-        gameBottomPanel:setImageColor('#ffffff88')
+        gameBottomPanel:setImageColor('white')
     end
 
     applyMobileMargins()
@@ -1942,6 +1939,75 @@ function checkAndOpenLeftPanel()
     end
 end
 
+-- extended view: the minimap gets its own holder above the two columns of one side;
+-- the main panel (health/inventory) stays a single column, as in the original layout
+EXTENDED_MINIMAP_HEIGHT = 220
+
+-- re-anchors the four side columns; `minimapSide` ('left'/'right'/nil) is the side that starts below the holder
+local function anchorSideColumns(minimapSide)
+    local function anchorColumn(panel, horizontalEdge, target, targetEdge, top)
+        panel:breakAnchors()
+        panel:addAnchor(horizontalEdge, target, targetEdge)
+        panel:addAnchor(AnchorTop, top, top == 'parent' and AnchorTop or AnchorBottom)
+        panel:addAnchor(AnchorBottom, 'parent', AnchorBottom)
+    end
+
+    local leftTop = minimapSide == 'left' and 'extendedMinimapHolder' or 'parent'
+    local rightTop = minimapSide == 'right' and 'extendedMinimapHolder' or 'parent'
+    anchorColumn(gameLeftPanel, AnchorLeft, 'parent', AnchorLeft, leftTop)
+    anchorColumn(gameLeftExtraPanel, AnchorLeft, 'gameLeftPanel', AnchorRight, leftTop)
+    gameMainRightPanel:breakAnchors()
+    gameMainRightPanel:addAnchor(AnchorRight, 'parent', AnchorRight)
+    gameMainRightPanel:addAnchor(AnchorTop, rightTop, rightTop == 'parent' and AnchorTop or AnchorBottom)
+    anchorColumn(gameRightPanel, AnchorRight, 'parent', AnchorRight, 'gameMainRightPanel')
+    anchorColumn(gameRightExtraPanel, AnchorRight, 'gameRightPanel', AnchorLeft, rightTop)
+end
+
+function getMinimapSide()
+    return g_settings.getString('extendedMinimapSide', 'right') == 'left' and 'left' or 'right'
+end
+
+function getExtendedMinimapHolder()
+    return gameRootPanel:getChildById('extendedMinimapHolder')
+end
+
+function layoutExtendedMinimap()
+    local side = getMinimapSide()
+    local holder = getExtendedMinimapHolder()
+    -- anchored only to the screen edge with an explicit size: the columns anchor below it
+    holder:breakAnchors()
+    holder:addAnchor(AnchorTop, 'parent', AnchorTop)
+    if side == 'left' then
+        holder:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+    else
+        holder:addAnchor(AnchorRight, 'parent', AnchorRight)
+    end
+    holder:setSize({ width = SIDE_PANEL_WIDTH * 2 + 1, height = EXTENDED_MINIMAP_HEIGHT })
+    holder:show()
+    anchorSideColumns(side)
+end
+
+-- top-menu minimap toggle: without the minimap the columns go back up to the top
+function setExtendedMinimapVisible(visible)
+    if currentViewMode ~= 2 then
+        return
+    end
+    if visible then
+        layoutExtendedMinimap()
+    else
+        getExtendedMinimapHolder():hide()
+        anchorSideColumns(nil)
+    end
+end
+
+function setMinimapSide(side)
+    if currentViewMode ~= 2 or side == getMinimapSide() then
+        return
+    end
+    g_settings.set('extendedMinimapSide', side)
+    layoutExtendedMinimap()
+end
+
 function applyExtendedViewLayout(extendedView)
     if extendedView == isExtendedViewActive then return end
     isExtendedViewActive = extendedView
@@ -1949,6 +2015,7 @@ function applyExtendedViewLayout(extendedView)
     local buttons = { leftIncreaseSidePanels, rightIncreaseSidePanels,
         rightDecreaseSidePanels, leftDecreaseSidePanels }
 
+    bottomSplitter:setVisible(not extendedView)
     if extendedView then
         for _, btn in ipairs(buttons) do
             btn:hide()
@@ -1969,7 +2036,10 @@ function applyExtendedViewLayout(extendedView)
         gameBottomPanel:getChildById('rightResizeBorder'):setMaximum(gameBottomPanel:getWidth())
         gameBottomPanel:getChildById('bottomResizeBorder'):enable()
         gameBottomPanel:getChildById('rightResizeBorder'):enable()
+        -- height follows its content, so dragging health/inventory out leaves no dead space above the column
+        gameMainRightPanel:getLayout():setFitChildren(true)
         gameMainRightPanel:setHeight(0)
+        layoutExtendedMinimap()
         gameMainRightPanel:setImageColor('alpha')
         gameBottomPanel:addAnchor(AnchorTop, 'gameBottomActionPanel', AnchorBottom)
         gameBottomPanel:addAnchor(AnchorBottom, 'parent', AnchorBottom)
@@ -1979,13 +2049,12 @@ function applyExtendedViewLayout(extendedView)
         gameRightActionPanel:setBorderWidthLeft(0)
     else
         -- Reset to normal view
+        getExtendedMinimapHolder():hide()
+        anchorSideColumns(nil)
+        gameMainRightPanel:getLayout():setFitChildren(false)
         gameMainRightPanel:setHeight(200)
         gameMainRightPanel:setMarginTop(0)
         gameMainRightPanel:setImageColor('white')
-        gameLeftActionPanel:setImageSource('/images/ui/actionbar/actionbar_background-light')
-        gameRightActionPanel:setImageSource('/images/ui/actionbar/actionbar_background-light')
-        gameLeftActionPanel:setBorderWidthRight(1)
-        gameRightActionPanel:setBorderWidthLeft(1)
         for _, btn in ipairs(buttons) do
             btn:setMarginTop(0)
             btn:show()

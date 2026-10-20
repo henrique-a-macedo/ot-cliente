@@ -361,22 +361,11 @@ return {
         end
     },
     showAnimatedCursor = {
-        value = true,
+        value = false,
         action = function(value, options, controller, panels, extraWidgets)
-            if value then
-                -- Disable native cursor when animated cursor is enabled
-                if options.nativeCursor.value then
-                    options.nativeCursor.value = false
-                    g_settings.set('nativeCursor', false)
-                    g_mouse.popCursor('window')
-                    -- Update the UI checkbox
-                    local widget = panels.interface:recursiveGetChildById('nativeCursor')
-                    if widget then
-                        widget:setChecked(false)
-                    end
-                end
-            end
-            panels.gameMapPanel:setCursorAnimations(value)
+            -- classic 8.6 cursor: always off, even if an older saved setting says otherwise
+            options.showAnimatedCursor.value = false
+            panels.gameMapPanel:setCursorAnimations(false)
         end
     },
     showDragIcon        = {
@@ -539,6 +528,7 @@ return {
     showSpellGroupCooldowns           = {
         value = true,
         action = function(value, options, controller, panels, extraWidgets)
+            if not modules.game_cooldown then return end
             modules.game_cooldown.setSpellGroupCooldownsVisible(value)
         end
     },
@@ -569,6 +559,7 @@ return {
     distFromCenScrollbar              = {
         value = 0,
         action = function(value, options, controller, panels, extraWidgets)
+            if not modules.game_healthcircle then return end
             local bar = modules.game_healthcircle.optionPanel:recursiveGetChildById('distFromCenScrollbar')
             if bar then
                 bar:setText(tr('Distance: %s', bar:recursiveGetChildById('valueBar'):getValue()))
@@ -579,6 +570,7 @@ return {
     opacityScrollbar                  = {
         value = 0,
         action = function(value, options, controller, panels, extraWidgets)
+            if not modules.game_healthcircle then return end
             local bar = modules.game_healthcircle.optionPanel:recursiveGetChildById('opacityScrollbar')
             if bar then
                 bar:setText(tr('Opacity: %s', bar:recursiveGetChildById('valueBar'):getValue() / 100))
@@ -992,18 +984,21 @@ return {
     graphicalCooldown = {
         value = true,
         action = function(value)
+            if not modules.game_actionbar then return end
             modules.game_actionbar.toggleCooldownOption()
         end,
     },
     cooldownSecond = {
         value = true,
         action = function(value)
+            if not modules.game_actionbar then return end
             modules.game_actionbar.toggleCooldownOption()
         end,
     },
     actionBarShowBottom1 = {
         value = true,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar13") or false
             modules.game_actionbar.configureActionBar('actionBarShowBottom1', allBox and value)
         end,
@@ -1011,6 +1006,7 @@ return {
     actionBarShowBottom2 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar13") or false
             modules.game_actionbar.configureActionBar('actionBarShowBottom2', allBox and value)
         end,
@@ -1018,6 +1014,7 @@ return {
     actionBarShowBottom3 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar13") or false
             modules.game_actionbar.configureActionBar('actionBarShowBottom3', allBox and value)
         end,
@@ -1025,6 +1022,7 @@ return {
     actionBarShowLeft1 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar46") or false
             modules.game_actionbar.configureActionBar('actionBarShowLeft1', allBox and value)
         end,
@@ -1032,6 +1030,7 @@ return {
     actionBarShowLeft2 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar46") or false
             modules.game_actionbar.configureActionBar('actionBarShowLeft2', allBox and value)
         end,
@@ -1039,6 +1038,7 @@ return {
     actionBarShowLeft3 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar46") or false
             modules.game_actionbar.configureActionBar('actionBarShowLeft3', allBox and value)
         end,
@@ -1046,6 +1046,7 @@ return {
     actionBarShowRight1 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar79") or false
             modules.game_actionbar.configureActionBar('actionBarShowRight1', allBox and value)
             return true
@@ -1054,6 +1055,7 @@ return {
     actionBarShowRight2 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar79") or false
             modules.game_actionbar.configureActionBar('actionBarShowRight2', allBox and value)
         end,
@@ -1061,6 +1063,7 @@ return {
     actionBarShowRight3 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local allBox = modules.client_options.getOption("allActionBar79") or false
             modules.game_actionbar.configureActionBar('actionBarShowRight3', allBox and value)
         end,
@@ -1068,6 +1071,7 @@ return {
     allActionBar46 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local huds = {"actionBarShowLeft1", "actionBarShowLeft2", "actionBarShowLeft3"}
             for _, actionBar in pairs(huds) do
                 local hud =  panels.actionbars:recursiveGetChildById(actionBar)
@@ -1083,6 +1087,7 @@ return {
     allActionBar13 = {
         value = true,
         action = function(value)
+            if not modules.game_actionbar then return end
             local huds = {"actionBarShowBottom1", "actionBarShowBottom2", "actionBarShowBottom3"}
             for _, actionBar in pairs(huds) do
                 local hud =  panels.actionbars:recursiveGetChildById(actionBar)
@@ -1098,6 +1103,7 @@ return {
     allActionBar79 = {
         value = false,
         action = function(value)
+            if not modules.game_actionbar then return end
             local huds = {"actionBarShowRight1", "actionBarShowRight2", "actionBarShowRight3"}
             for _, actionBar in pairs(huds) do
                 local hud = panels.actionbars:recursiveGetChildById(actionBar)
@@ -1113,24 +1119,28 @@ return {
     actionTooltip = {
         value = true,
         action = function(value)
+            if not modules.game_actionbar then return end
             modules.game_actionbar.updateVisibleOptions('tooltip', value)
         end,
     },
     showSpellParameters = {
         value = true,
         action = function(value)
+            if not modules.game_actionbar then return end
             modules.game_actionbar.updateVisibleOptions('parameter', value)
         end,
     },
     showHKObjectsBars = {
         value = true,
         action = function(value)
+            if not modules.game_actionbar then return end
             modules.game_actionbar.updateVisibleOptions('amount', value)
         end,
     },
     showAssignedHKButton = {
         value = true,
         action = function(value)
+            if not modules.game_actionbar then return end
             modules.game_actionbar.updateVisibleOptions('hotkey', value)
         end,
     },

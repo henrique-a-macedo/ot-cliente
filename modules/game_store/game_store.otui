@@ -16,7 +16,7 @@ HistoryEntry < UIWidget
   margin-right: 8
   margin-top: 24
   size: 535 15
-  background-color: #484848
+  background-color: #262626
 
   Label
     id: historyDate
@@ -393,7 +393,7 @@ StoreWindow
       anchors.right: parent.right
       anchors.bottom: parent.bottom
       margin-bottom: 22
-      background-color: #363636
+      background-color: #1e1e1e
       border: 1 black
       layout:
         type: verticalBox

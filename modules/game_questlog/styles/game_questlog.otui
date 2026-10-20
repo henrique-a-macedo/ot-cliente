@@ -18,7 +18,7 @@ TextListQuestLog < Panel
     padding: 1
     width: 10
     focusable: true
-    background-color: #404040
+    background-color: #222222
     auto-focus: first
 
   VerticalQtScrollBar
@@ -50,7 +50,7 @@ MultiLineQuestLog < Panel
     width: 10
     focusable: false
     text-wrap: true
-    background-color: #404040
+    background-color: #222222
 
 
   VerticalQtScrollBar

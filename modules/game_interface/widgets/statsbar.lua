@@ -785,7 +785,9 @@ function StatsBar.reloadCurrentStatsBarDeepInfo()
 end
 
 function StatsBar.onHarmonyChange(localPlayer, harmony, oldHarmony)
-    modules.game_healthcircle.whenMonkHarmonyChange(localPlayer, harmony, oldHarmony)
+    if modules.game_healthcircle then
+        modules.game_healthcircle.whenMonkHarmonyChange(localPlayer, harmony, oldHarmony)
+    end
     local statsBars = StatsBar.getAllStatsBarWithPosition()
     for _, barElement in ipairs(statsBars) do
         local harmonies = barElement:recursiveGetChildById('harmonies')
@@ -808,7 +810,9 @@ function StatsBar.onHarmonyChange(localPlayer, harmony, oldHarmony)
 end
 
 function StatsBar.onSereneChange(localPlayer, serene, oldSerene)
-    modules.game_healthcircle.whenMonkSereneChange(localPlayer, serene, oldSerene)
+    if modules.game_healthcircle then
+        modules.game_healthcircle.whenMonkSereneChange(localPlayer, serene, oldSerene)
+    end
     local statsBars = StatsBar.getAllStatsBarWithPosition()
     for _, barElement in ipairs(statsBars) do
         local sereneIcon = barElement:recursiveGetChildById('serene')
@@ -833,7 +837,9 @@ function StatsBar.onVocationChange(localPlayer, vocation, oldVocation)
     isWarriorVocation = vocation == VocationsClient.Knight or vocation == VocationsClient.EliteKnight or
                         vocation == VocationsClient.Paladin or vocation == VocationsClient.RoyalPaladin or
                         vocation == VocationsClient.Monk or vocation == VocationsClient.ExaltedMonk
-    modules.game_healthcircle.checkMonkVocation()
+    if modules.game_healthcircle then
+        modules.game_healthcircle.checkMonkVocation()
+    end
     local statsBars = StatsBar.getAllStatsBarWithPosition()
     local isMonk = localPlayer:isMonk() and g_game.getFeature(GameVocationMonk)
     for _, barElement in ipairs(statsBars) do

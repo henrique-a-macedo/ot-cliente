@@ -16,7 +16,7 @@
 .content-right {
   width: 375px;
   height: 563px;
-  background-color: #404040;
+  background-color: #222222;
   margin-bottom: 10px;
   margin-left: 395px;
   display: block;
@@ -54,12 +54,12 @@
   border-width: 1;
   border-color: #00000077;
   height: 425px;
-  background-color: #404040;
+  background-color: #222222;
 }
 
 .quest-info {
   margin-top: 5px;
-  background-color: #363636;
+  background-color: #1e1e1e;
   height: 300px;
 }
 
