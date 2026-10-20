@@ -66,7 +66,41 @@ local function setupUIButtons()
     end
 end
 
+-- attributes (STR/DEX/INT/VIT) live on the server; it sends "str=1;dex=2;int=3;vit=4;free=5"
+local ATTRIBUTE_OPCODE = 120
+local ATTRIBUTE_ROWS = { str = 'attrStr', dex = 'attrDex', int = 'attrInt', vit = 'attrVit' }
+
+local function onAttributesMessage(protocol, opcode, buffer)
+    if not skillsWindow then
+        return
+    end
+
+    local values = {}
+    for key, value in buffer:gmatch('(%w+)=(%-?%d+)') do
+        values[key] = tonumber(value)
+    end
+
+    local free = values.free or 0
+    for id, rowId in pairs(ATTRIBUTE_ROWS) do
+        local row = skillsWindow:recursiveGetChildById(rowId)
+        row:getChildById('value'):setText(tostring(values[id] or 0))
+        row:getChildById('add'):setVisible(free > 0)
+    end
+
+    local freeRow = skillsWindow:recursiveGetChildById('attrFree')
+    freeRow:getChildById('value'):setText(tostring(free))
+    freeRow:setVisible(free > 0)
+end
+
+function addAttributePoint(id)
+    local protocol = g_game.getProtocolGame()
+    if protocol then
+        protocol:sendExtendedOpcode(ATTRIBUTE_OPCODE, 'add:' .. id)
+    end
+end
+
 function skillController:onInit()
+    ProtocolGame.registerExtendedOpcode(ATTRIBUTE_OPCODE, onAttributesMessage)
     skillController:registerEvents(LocalPlayer, {
         onExperienceChange = onExperienceChange,
         onLevelChange = onLevelChange,
@@ -121,6 +155,7 @@ function skillController:onInit()
 end
 
 function skillController:onTerminate()
+    ProtocolGame.unregisterExtendedOpcode(ATTRIBUTE_OPCODE)
     Keybind.delete("Windows", "Show/hide skills windows")
     skillsWindow:destroy()
     skillsButton:destroy()
@@ -143,9 +178,9 @@ local SKILL_GROUPS = {
     misc = {
         'momentum', 'transcendence', 'amplification'
     },
+    -- magic level and weapon skills are frozen and hidden (attributes replace them)
     individual = {
-        'level', 'stamina', 'offlineTraining', 'magiclevel', 'skillId0', 'skillId1', 
-        'skillId2', 'skillId3', 'skillId4', 'skillId5', 'skillId6'
+        'level', 'stamina', 'offlineTraining'
     },
     GameAdditionalSkills = {
         'skillId7', 'skillId8', 'skillId9', 'skillId10', 'skillId11', 'skillId12'

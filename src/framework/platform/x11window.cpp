@@ -1412,36 +1412,49 @@ std::string X11Window::getClipboardText()
     Window ownerWindow = XGetSelectionOwner(m_display, clipboard);
     if (ownerWindow == m_window)
         return m_clipboardText;
+    if (ownerWindow == X11None)
+        return {};
+
+    // ICCCM: the owner converts the selection into a property of the *requestor's* window. Using the owner's
+    // window here (as before) breaks the WSLg/XWayland clipboard bridge and drops the X connection.
+    Atom property = XInternAtom(m_display, "OTCLIENT_CLIPBOARD", False);
+    XConvertSelection(m_display, clipboard, XA_STRING, property, m_window, CurrentTime);
+    XFlush(m_display);
+
+    // wait for the owner's answer (up to ~500 ms)
+    XEvent event;
+    bool notified = false;
+    for (int i = 0; i < 50; ++i) {
+        if (XCheckTypedWindowEvent(m_display, m_window, SelectionNotify, &event)) {
+            notified = true;
+            break;
+        }
+        stdext::millisleep(10);
+    }
+    if (!notified || event.xselection.property == X11None)
+        return {};
+
+    Atom type;
+    int format;
+    ulong len, bytesLeft;
+    char* data = nullptr;
+    XGetWindowProperty(m_display, m_window, property, 0, 10000000L, True, XA_STRING,
+        &type,
+        &format,
+        &len,
+        &bytesLeft,
+        (uint8_t**)&data);
 
     std::string clipboardText;
-    if (ownerWindow != X11None) {
-        XConvertSelection(m_display, clipboard, XA_STRING, XA_PRIMARY, ownerWindow, CurrentTime);
-        XFlush(m_display);
-
-        // hack to wait SelectioNotify event, otherwise we will get wrong clipboard pastes
-        // TODO: fix this in a correct way
-        stdext::millisleep(100);
-
-        // check for data
-        Atom type;
-        int format;
-        ulong len, bytesLeft;
-        char* data;
-        XGetWindowProperty(m_display, ownerWindow,
-            XA_PRIMARY, 0, 10000000L, 0, XA_STRING,
-            &type,
-            &format,
-            &len,
-            &bytesLeft,
-            (uint8_t**)&data);
+    if (data) {
         if (len > 0) {
             if (stdext::is_valid_utf8(data))
                 clipboardText = stdext::utf8_to_latin1(data);
             else
                 clipboardText = data;
         }
+        XFree(data);
     }
-
     return clipboardText;
 }
 

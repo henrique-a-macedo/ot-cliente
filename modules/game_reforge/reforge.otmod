@@ -1,0 +1,8 @@
+Module
+  name: game_reforge
+  description: Reforge window for item lines and stones (server opcode 121)
+  author: henrique
+  sandboxed: true
+  scripts: [ reforge ]
+  @onLoad: init()
+  @onUnload: terminate()

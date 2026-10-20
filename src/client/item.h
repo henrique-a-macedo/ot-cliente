@@ -90,6 +90,8 @@ public:
     void setDecaying(bool decaying);
     void setCharges(const uint32_t charges) { m_charges = charges; }
     void setTier(const uint8_t tier) { m_tier = tier; }
+    // custom server: 0 none, 1 common, 2 uncommon, 3 rare, 4 legendary
+    void setRarity(const uint8_t rarity) { m_rarity = rarity; }
 
     int getCountOrSubType() { return m_countOrSubType; }
     int getSubType();
@@ -100,6 +102,7 @@ public:
     bool isDecaying() const { return m_decaying; }
     uint32_t getCharges() { return m_charges; }
     uint8_t getTier() { return m_tier; }
+    uint8_t getRarity() { return m_rarity; }
 
     bool isValid() { return getThingType() != nullptr; }
 
@@ -180,6 +183,7 @@ private:
     bool m_decaying{ false };
     uint32_t m_charges{ 0 };
     uint8_t m_tier{ 0 };
+    uint8_t m_rarity{ 0 };
     uint8_t m_phase{ 0 };
 
     Color m_color{ Color::white };

@@ -26,69 +26,31 @@ local function getColorForValue(value)
     end
 end
 
-local function clipfunction(value)
-    if value >= 1000000 then
-        return "128 0 32 32"
-    elseif value >= 100000 then
-        return "96 0 32 32"
-    elseif value >= 10000 then
-        return "64 0 32 32"
-    elseif value >= 1000 then
-        return "32 0 32 32"
-    elseif value >= 50 then
-        return "0 0 32 32"
-    end
-    return ""
-end
+-- frame images, one 32x32 frame per rarity: common (grey), uncommon (green), rare (blue), legendary (orange)
+local RARITY_FRAME_IMAGES = {
+    frames = '/images/ui/item_rarity_frames',
+    corners = '/images/ui/item_rarity_corners'
+}
 
+-- the frame comes from the item's own rarity, sent by the server with every item
+-- (0 none, 1 common, 2 uncommon, 3 rare, 4 legendary); items without one get no frame
 function ItemsDatabase.getClipAndImagePath(item)
-    if not item then
+    local imagePath = RARITY_FRAME_IMAGES[modules.client_options.getOption('framesRarity')]
+    if not imagePath or type(item) ~= 'userdata' or not item.getRarity then
         return nil, nil, nil
     end
 
-    local frameOption = modules.client_options.getOption('framesRarity')
-    if frameOption == "none" then
-        return nil, nil, nil
-    end
-    local imagePath = '/images/ui/item'
-    local clip = nil
-
-    if type(item) == "number" then
-        item = g_things.getThingType(item, ThingCategoryItem)
-    end
-
-    if not item then
+    local rarity = item:getRarity()
+    if rarity <= 0 then
         return nil, nil, nil
     end
 
-    if item then
-        local price = type(item) == "number" and item or (item and item:getMeanPrice()) or 0
-        local itemRarity = getColorForValue(price)
-        if itemRarity then
-            clip = clipfunction(price)
-            if clip ~= "" then
-                if frameOption == "frames" then
-                    imagePath = "/images/ui/rarity_frames"
-                elseif frameOption == "corners" then
-                    imagePath = "/images/ui/containerslot-coloredges"
-                end
-            else
-                clip = nil
-            end
-        end
-    end
-
-    local clipObject = nil
-    if clip then
-        local x, y, w, h = clip:match("(%d+) (%d+) (%d+) (%d+)")
-        clipObject = { x = tonumber(x), y = tonumber(y), width = tonumber(w), height = tonumber(h) }
-    end
-
-    return clip, imagePath, clipObject
+    local clipObject = { x = (rarity - 1) * 32, y = 0, width = 32, height = 32 }
+    return string.format('%d 0 32 32', clipObject.x), imagePath, clipObject
 end
 
 function ItemsDatabase.setRarityItem(widget, item, style)
-    if not g_game.getFeature(GameColorizedLootValue) or not widget then
+    if not widget then
         return
     end
 
@@ -98,7 +60,7 @@ function ItemsDatabase.setRarityItem(widget, item, style)
         -- no frame applies (empty slot or frames disabled): clear a frame left by a previous item,
         -- but only if this widget is currently showing one, to avoid clobbering custom backgrounds
         local currentSource = widget:getImageSource()
-        if currentSource == "/images/ui/rarity_frames" or currentSource == "/images/ui/containerslot-coloredges" then
+        if currentSource == RARITY_FRAME_IMAGES.frames or currentSource == RARITY_FRAME_IMAGES.corners then
             widget:setImageClip(nil)
             widget:setImageSource('/images/ui/item')
         end

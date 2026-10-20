@@ -146,6 +146,7 @@ local function inventoryEvent(player, slot, item, oldItem)
     slotPanel.item:setShowDuration(g_game.getFeature(GameThingClock) and modules.client_options.getOption('showExpiryInInvetory'))
     slotPanel.item:setShowCharges(g_game.getFeature(GameThingCounter) and modules.client_options.getOption('showExpiryInInvetory'))
     ItemsDatabase.setTier(slotPanel.item, item)
+    ItemsDatabase.setRarityItem(slotPanel.item, item)
 
     if slot == InventorySlotLeft then
         if item and modules.game_proficiency then

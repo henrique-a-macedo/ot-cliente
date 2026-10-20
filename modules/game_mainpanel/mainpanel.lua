@@ -299,7 +299,8 @@ function toggleExtendedViewButtons(extended)
         optionsController.ui:setHeight(28)
         local mainRightPanel = modules.game_interface.getMainRightPanel()
         if mainRightPanel:hasChild(optionsController.ui) then
-            mainRightPanel:moveChildToIndex(optionsController.ui, 4)
+            -- 4th place, after minimap/health/inventory; fewer may be back yet when leaving the extended view
+            mainRightPanel:moveChildToIndex(optionsController.ui, math.min(4, mainRightPanel:getChildCount()))
         end
     end
     refreshOptionsSizes()

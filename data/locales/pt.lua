@@ -159,7 +159,6 @@ locale = {
     ["Display player mana bar"] = "Exibir barra de mana",
     ["Display text messages"] = "Exibir mensagens de texto",
     ["Distance Fighting"] = "Combate a Distância",
-    ["Don't stretch or shrink Game Window"] = "Não esticar ou contrair a janela do game",
     ["Don't stretch/shrink Game Window"] = "Não esticar/contrair a janela do game",
     ["Don\'t stretch or shrink Game Window"] = "Não esticar ou contrair a janela do game",
     ["Draw Floating Effects"] = "Desenhar Efeitos Flutuantes",

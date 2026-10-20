@@ -158,7 +158,6 @@ locale = {
     ["Display player mana bar"] = false,
     ["Display text messages"] = "Wyswietlaj wiadomosci tekstowe",
     ["Distance Fighting"] = "Walka na odleglosc",
-    ["Don't stretch or shrink Game Window"] = false,
     ["Don't stretch/shrink Game Window"] = "Nie rozszerzaj/zwezaj Okna Gry",
     ["Don\'t stretch or shrink Game Window"] = false,
     ["Draw Floating Effects"] = "Draw Floating Effects",

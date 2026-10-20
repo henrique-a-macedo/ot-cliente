@@ -1,0 +1,157 @@
+ReforgeRow < Label
+  font: verdana-11px-monochrome
+  text-offset: 4 3
+  height: 18
+  focusable: true
+  color: #cccccc
+  background-color: alpha
+  $focus:
+    background-color: #ffffff22
+    color: #ffffff
+
+ReforgeTitle < Label
+  font: verdana-11px-antialised
+  color: #e0e0e0
+
+MainWindow
+  id: reforgeWindow
+  !text: tr('Reforge')
+  size: 600 430
+  visible: false
+  @onEscape: modules.game_reforge.hide()
+
+  // ---- left: the item and its lines ----
+  ReforgeTitle
+    id: itemTitle
+    !text: tr('Item')
+    anchors.top: parent.top
+    anchors.left: parent.left
+
+  Item
+    id: itemSlot
+    size: 40 40
+    virtual: true
+    anchors.top: itemTitle.bottom
+    anchors.left: parent.left
+    margin-top: 4
+
+  Label
+    id: itemName
+    !text: tr('Drag an item here')
+    anchors.top: itemSlot.top
+    anchors.left: itemSlot.right
+    anchors.right: linesList.right
+    margin-left: 8
+    margin-top: 4
+    color: #c0c0c0
+
+  Label
+    id: itemRarity
+    anchors.top: itemName.bottom
+    anchors.left: itemName.left
+    anchors.right: itemName.right
+    margin-top: 4
+
+  ReforgeTitle
+    id: linesTitle
+    !text: tr('Lines')
+    anchors.top: itemSlot.bottom
+    anchors.left: parent.left
+    margin-top: 10
+
+  TextList
+    id: linesList
+    vertical-scrollbar: linesScrollBar
+    anchors.top: linesTitle.bottom
+    anchors.left: parent.left
+    width: 270
+    height: 200
+    margin-top: 4
+    focusable: false
+
+  VerticalScrollBar
+    id: linesScrollBar
+    anchors.top: linesList.top
+    anchors.bottom: linesList.bottom
+    anchors.right: linesList.right
+    step: 18
+    pixels-scroll: true
+
+  Label
+    id: vacancies
+    anchors.top: linesList.bottom
+    anchors.left: linesList.left
+    anchors.right: linesList.right
+    margin-top: 4
+    color: #a0a0a0
+
+  // ---- right: the stones ----
+  ReforgeTitle
+    id: stonesTitle
+    !text: tr('Stones')
+    anchors.top: parent.top
+    anchors.left: linesList.right
+    anchors.right: parent.right
+    margin-left: 14
+
+  TextList
+    id: stonesList
+    vertical-scrollbar: stonesScrollBar
+    anchors.top: linesList.top
+    anchors.left: stonesTitle.left
+    anchors.right: parent.right
+    height: 200
+    focusable: false
+
+  VerticalScrollBar
+    id: stonesScrollBar
+    anchors.top: stonesList.top
+    anchors.bottom: stonesList.bottom
+    anchors.right: stonesList.right
+    step: 18
+    pixels-scroll: true
+
+  Label
+    id: stoneInfo
+    anchors.top: stonesList.bottom
+    anchors.left: stonesList.left
+    anchors.right: stonesList.right
+    margin-top: 6
+    height: 48
+    text-wrap: true
+    text-align: topleft
+    color: #c0c0c0
+
+  ComboBox
+    id: affixChoice
+    anchors.top: stoneInfo.bottom
+    anchors.left: stonesList.left
+    width: 120
+    visible: false
+
+  Label
+    id: resultLabel
+    anchors.left: parent.left
+    anchors.right: applyButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 10
+    height: 32
+    text-wrap: true
+    text-align: left
+
+  Button
+    id: closeButton
+    !text: tr('Close')
+    width: 70
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_reforge.hide()
+
+  Button
+    id: applyButton
+    !text: tr('Apply')
+    width: 70
+    anchors.right: closeButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    @onClick: modules.game_reforge.apply()

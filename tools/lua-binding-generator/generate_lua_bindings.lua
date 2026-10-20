@@ -85,7 +85,7 @@ function filterType(arg)
   arg = arg:gsub('^double$', 'number')
   arg = arg:gsub('^bool$', 'boolean')
   arg = arg:gsub('^ticks_t$', 'integer')
-  arg = arg:gsub('.*\*.*', 'buffer')
+  arg = arg:gsub('.*%*.*', 'buffer')
   arg = arg:gsub('.*::.*', 'enum')
   return arg
 end
@@ -243,9 +243,9 @@ function parseHeader(file)
         insideclass = false
         emitClassEnd()
       elseif bindnext then
-        funcreturn, funcname, funcargs = line:match('^[%s]*([%w <>&\*:_]*) ([%w_]+)%(([^%)]*%))[%w ]*[;{=].*$')
+        funcreturn, funcname, funcargs = line:match('^[%s]*([%w <>&%*:_]*) ([%w_]+)%(([^%)]*%))[%w ]*[;{=].*$')
         if funcname then
-          funcargs = funcargs:match('(.*)\%)')
+          funcargs = funcargs:match('(.*)%)')
           if funcname ~= cppclass then
             if singleton then
               emitSingletonFunctionDecl(cppclass, luaclass, funcname, funcargs, funcreturn)

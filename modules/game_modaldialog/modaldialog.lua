@@ -1,12 +1,13 @@
 controllerModal = Controller:new()
 
-local MINIMUM_WIDTH_QT = 380
-local MINIMUM_WIDTH_OLD = 245
-local MAXIMUM_WIDTH = 600
+-- 50% wider than upstream so talent / stone choices fit on one line
+local MINIMUM_WIDTH_QT = 570
+local MINIMUM_WIDTH_OLD = 368
+local MAXIMUM_WIDTH = 900
 local MINIMUM_CHOICES = 4
 local MAXIMUM_CHOICES = 10
 local BASE_HEIGHT = 40
-local MAX_CHOICE_TEXT = 28
+local MAX_CHOICE_TEXT = 80
 
 local function destroyWindow()
     local ui = controllerModal.ui

@@ -4482,6 +4482,9 @@ ItemPtr ProtocolGame::getItem(const InputMessagePtr& msg, int id)
         item->setTooltip(msg->getString());
     }
 
+    // custom server: every item ends with its rarity byte (see forgottenserver NetworkMessage::addItem)
+    item->setRarity(msg->getU8());
+
     return item;
 }
 

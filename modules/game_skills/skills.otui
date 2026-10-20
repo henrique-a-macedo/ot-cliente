@@ -206,8 +206,96 @@ MiniWindow
       margin-top: 5
       margin-bottom: 5
 
+    // attributes replace use-based skills (values come from the server, opcode 120)
+    SkillButton
+      id: attrStr
+      height: 15
+      SkillNameLabel
+        !text: tr('Strength')
+      SkillValueLabel
+        anchors.left: none
+        width: 32
+      Button
+        id: add
+        !text: '+'
+        !tooltip: tr('Spend an attribute point')
+        size: 14 14
+        anchors.right: value.left
+        anchors.verticalCenter: parent.verticalCenter
+        margin-right: 4
+        visible: false
+        @onClick: modules.game_skills.addAttributePoint('str')
+
+    SkillButton
+      id: attrDex
+      height: 15
+      SkillNameLabel
+        !text: tr('Dexterity')
+      SkillValueLabel
+        anchors.left: none
+        width: 32
+      Button
+        id: add
+        !text: '+'
+        !tooltip: tr('Spend an attribute point')
+        size: 14 14
+        anchors.right: value.left
+        anchors.verticalCenter: parent.verticalCenter
+        margin-right: 4
+        visible: false
+        @onClick: modules.game_skills.addAttributePoint('dex')
+
+    SkillButton
+      id: attrInt
+      height: 15
+      SkillNameLabel
+        !text: tr('Intelligence')
+      SkillValueLabel
+        anchors.left: none
+        width: 32
+      Button
+        id: add
+        !text: '+'
+        !tooltip: tr('Spend an attribute point')
+        size: 14 14
+        anchors.right: value.left
+        anchors.verticalCenter: parent.verticalCenter
+        margin-right: 4
+        visible: false
+        @onClick: modules.game_skills.addAttributePoint('int')
+
+    SkillButton
+      id: attrVit
+      height: 15
+      SkillNameLabel
+        !text: tr('Vitality')
+      SkillValueLabel
+        anchors.left: none
+        width: 32
+      Button
+        id: add
+        !text: '+'
+        !tooltip: tr('Spend an attribute point')
+        size: 14 14
+        anchors.right: value.left
+        anchors.verticalCenter: parent.verticalCenter
+        margin-right: 4
+        visible: false
+        @onClick: modules.game_skills.addAttributePoint('vit')
+
+    SkillButton
+      id: attrFree
+      height: 15
+      visible: false
+      margin-bottom: 5
+      SkillNameLabel
+        !text: tr('Attribute Points')
+      SkillValueLabel
+        color: #8fd18f
+
     SkillButton
       id: magiclevel
+      visible: false
       SkillNameLabel
         !text: tr('Magic Level')
       SkillValueLabel
@@ -219,6 +307,7 @@ MiniWindow
 
     SkillButton
       id: skillId0
+      visible: false
       SkillNameLabel
         !text: tr('Fist Fighting')
       SkillValueLabel
@@ -229,6 +318,7 @@ MiniWindow
 
     SkillButton
       id: skillId1
+      visible: false
       SkillNameLabel
         !text: tr('Club Fighting')
       SkillValueLabel
@@ -239,6 +329,7 @@ MiniWindow
 
     SkillButton
       id: skillId2
+      visible: false
       SkillNameLabel
         !text: tr('Sword Fighting')
       SkillValueLabel
@@ -249,6 +340,7 @@ MiniWindow
 
     SkillButton
       id: skillId3
+      visible: false
       SkillNameLabel
         !text: tr('Axe Fighting')
       SkillValueLabel
@@ -259,6 +351,7 @@ MiniWindow
 
     SkillButton
       id: skillId4
+      visible: false
       SkillNameLabel
         !text: tr('Distance Fighting')
       SkillValueLabel
@@ -269,6 +362,7 @@ MiniWindow
 
     SkillButton
       id: skillId5
+      visible: false
       SkillNameLabel
         !text: tr('Shielding')
       SkillValueLabel
@@ -279,6 +373,7 @@ MiniWindow
 
     SkillButton
       id: skillId6
+      visible: false
       SkillNameLabel
         !text: tr('Fishing')
       SkillValueLabel
