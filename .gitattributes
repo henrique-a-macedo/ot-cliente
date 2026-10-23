@@ -3,6 +3,8 @@
 *.lua eol=lf 
 *.md  text eol=lf
 *.txt eol=lf 
-*.ot* eol=lf 
+*.ot* eol=lf
+# the minimap (tools/gen_minimap.py) is binary: *.ot* above would rewrite its bytes
+*.otmm binary
 *.cpp eol=lf 
 *.h   eol=lf 

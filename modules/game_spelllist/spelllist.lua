@@ -210,6 +210,11 @@ function initializeSpelllist()
     table.sort(spells)
     for _, spellName in ipairs(spells) do
         local info = SpellInfo[SpelllistProfile][spellName]
+        if info and not tonumber(info.clientId) then
+            -- a spell without an icon used to abort the whole module (getImageClip on nil)
+            pwarning('Spell \'' .. spellName .. '\' has no icon (clientId), skipped in the spell list.')
+            info = nil
+        end
         if info then
             local tmpLabel = g_ui.createWidget('SpellListLabel', spellList)
             tmpLabel:setId(spellName)
@@ -217,9 +222,6 @@ function initializeSpelllist()
             tmpLabel:setPhantom(false)
 
             local iconId = tonumber(info.clientId)
-            if not iconId then
-                perror('Spell icon \'' .. info.icon .. '\' not found.')
-            end
 
             tmpLabel:setHeight(SpelllistSettings[SpelllistProfile].iconSize.height + 4)
             tmpLabel:setTextOffset(topoint((SpelllistSettings[SpelllistProfile].iconSize.width + 10) .. ' ' ..

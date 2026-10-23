@@ -86,12 +86,7 @@ local function load(version)
 
     loaded = #errorList == 0
     if loaded then
-        -- loading client files was successful, try to load sounds now
-        -- sound files are optional, this means that failing to load them
-        -- will not block logging into game
-        if g_sounds then
-            g_sounds.loadClientFiles(resolvepath(string.format('/data/sounds/%d/', version)))
-        end
+        -- this server ships without sounds: the 13.10 ones are wav, which the client cannot play
         return
     end
 
