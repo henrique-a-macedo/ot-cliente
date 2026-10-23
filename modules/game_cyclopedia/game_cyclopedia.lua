@@ -50,13 +50,20 @@ function controllerCyclopedia:onGameStart()
         end, 100, "unloadModule")
         return
     else
-        CyclopediaButton = modules.game_mainpanel.addToggleButton('CyclopediaButton', tr('Cyclopedia'),
-            '/images/options/cooldowns', function() toggle("items") end, false, 7)
-        ButtonBossSlot = modules.game_mainpanel.addToggleButton("bossSlot", tr("Open Boss Slots dialog"),
-            "/images/options/ButtonBossSlot", function() toggle("bossSlot") end, false, 20)
+        -- Only create if it doesn't exist (onGameEnd keeps them: every login used to add three more)
+        if not CyclopediaButton then
+            CyclopediaButton = modules.game_mainpanel.addToggleButton('CyclopediaButton', tr('Cyclopedia'),
+                '/images/options/cooldowns', function() toggle("items") end, false, 7)
+        end
+        if not ButtonBossSlot then
+            ButtonBossSlot = modules.game_mainpanel.addToggleButton("bossSlot", tr("Open Boss Slots dialog"),
+                "/images/options/ButtonBossSlot", function() toggle("bossSlot") end, false, 20)
+        end
         CyclopediaButton:setOn(false)
-        ButtonBestiary = modules.game_mainpanel.addToggleButton("bosstiary", tr("Open Bosstiary dialog"),
-            "/images/options/ButtonBosstiary", function() toggle("bosstiary") end, false, 17)
+        if not ButtonBestiary then
+            ButtonBestiary = modules.game_mainpanel.addToggleButton("bosstiary", tr("Open Bosstiary dialog"),
+                "/images/options/ButtonBosstiary", function() toggle("bosstiary") end, false, 17)
+        end
 
         contentContainer = controllerCyclopedia.ui:recursiveGetChildById('contentContainer')
         buttonSelection = controllerCyclopedia.ui:recursiveGetChildById('buttonSelection')

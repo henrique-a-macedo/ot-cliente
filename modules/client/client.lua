@@ -1,6 +1,8 @@
 local musicFilename = 'sounds/startup'
 local musicChannel = nil
-if g_sounds then
+-- the server ships without sounds (game_things does not load any): no startup music and audio off
+local SOUND_ENABLED = false
+if g_sounds and SOUND_ENABLED then
     musicChannel = g_sounds.getChannel(SoundChannels.Music)
 end
 
@@ -73,8 +75,8 @@ function startup()
     else
         EnterGame.firstShow()
     end
-    if g_app.hasUpdater() and g_sounds then
-        g_sounds.setAudioEnabled(g_settings.getBoolean('enableAudio', true))
+    if g_sounds then
+        g_sounds.setAudioEnabled(SOUND_ENABLED and g_settings.getBoolean('enableAudio', true))
     end
 end
 
