@@ -139,6 +139,10 @@ MAX_LINES = 100
 HELP_CHANNEL = 9
 local LOOT_CHANNEL_ID = 0xFFF0
 local OWNER_CHANNEL_ID = 0xFFFF
+-- words that start a conversation with an NPC and its talk range (server: FOCUS_GREETWORDS, the kings' "hail" and
+-- talkRadius in data/npc/lib/npcsystem)
+local NPC_GREETWORDS = { 'hi', 'hello', 'hail' }
+local NPC_TALK_RADIUS = 3
 
 consolePanel = nil
 consoleContentPanel = nil
@@ -1701,6 +1705,37 @@ function removeFilter(filter)
     table.removevalue(filters, filter)
 end
 
+local function isNpcGreeting(message)
+    local word = message:lower():match('^%s*(%a+)')
+    return word ~= nil and table.contains(NPC_GREETWORDS, word)
+end
+
+local function hasNpcInTalkRange()
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return false
+    end
+    local pos = player:getPosition()
+    for _, creature in ipairs(g_map.getSpectators(pos, false) or {}) do
+        if creature:isNpc() then
+            local npcPos = creature:getPosition()
+            if npcPos.z == pos.z and math.max(math.abs(npcPos.x - pos.x), math.abs(npcPos.y - pos.y)) <=
+                NPC_TALK_RADIUS then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- greeting an NPC selects the NPCs tab right away (not only when the answer arrives, which needs a private NPC
+-- message): its answers show there and what the player types next goes to the NPC
+local function selectNpcTab()
+    local npcTab = getTab('NPCs') or addTab('NPCs', false)
+    npcTab.npcChat = true
+    consoleTabBar:selectTab(npcTab)
+end
+
 function sendMessage(message, tab)
     local tab = tab or getCurrentTab()
     if not tab then
@@ -1811,6 +1846,9 @@ function sendMessage(message, tab)
         end
 
         g_game.talkChannel(SpeakTypesSettings[speaktypedesc].speakType, channel, message)
+        if tab == defaultTab and speaktypedesc == 'say' and isNpcGreeting(message) and hasNpcInTalkRange() then
+            selectNpcTab()
+        end
         return
     else
         local isPrivateCommand = false
