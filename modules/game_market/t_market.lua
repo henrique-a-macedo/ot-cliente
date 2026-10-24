@@ -1128,7 +1128,6 @@ function onSelectChildCategory(widget, selected, keepFilter)
     onClearSearch(clearHands)
     onClearMainMarket(true)
 
-    marketWindow.contentPanel.mainMarket.getPotionsButton:setVisible(false)
 
     if table.contains(enableCategories, selected.categoryId) then
         marketWindow.contentPanel.oneButton:setEnabled(true)
@@ -1229,10 +1228,6 @@ function onSelectChildCategory(widget, selected, keepFilter)
         x = 0,
         y = 0
     })
-
-    if selected.categoryId == 10 then
-        marketWindow.contentPanel.mainMarket.getPotionsButton:setVisible(true)
-    end
 
     isRebuildingCategory = false
 
@@ -1933,7 +1928,6 @@ function onSearchItem(textField)
 
     onClearMainMarket(true)
 
-    marketWindow.contentPanel.mainMarket.getPotionsButton:setVisible(false)
     marketWindow.contentPanel.selectedItem:setItemId(0)
 
     itemList.onChildFocusChange = function(self, selected, oldFocus)
@@ -2072,7 +2066,6 @@ function onShowRedirect(item)
 
     onClearMainMarket(true)
 
-    marketWindow.contentPanel.mainMarket.getPotionsButton:setVisible(false)
     marketWindow.contentPanel.selectedItem:setItemId(0)
 
     itemList.onChildFocusChange = function(self, selected, oldFocus)
@@ -2567,52 +2560,3 @@ function focusNextBuyLabel(list)
     end
 end
 
-function openStorePotions()
-    -- Close market window
-    if marketWindow and marketWindow:isVisible() then
-        closeMarket()
-    end
-
-    -- Open game store
-    if not modules.game_store then
-        return
-    end
-
-    -- Show the store
-    modules.game_store.show()
-
-    -- Wait a bit for the store to load categories, then select Consumables > Potions
-    scheduleEvent(function()
-        local storeUI = modules.game_store.getUI()
-        if not storeUI then
-            return
-        end
-
-        local listCategory = storeUI:recursiveGetChildById('listCategory')
-        if not listCategory then
-            return
-        end
-
-        -- Find and click Consumables category
-        local consumablesWidget = listCategory:getChildById('Consumables')
-        if consumablesWidget and consumablesWidget.Button then
-            consumablesWidget.Button:onClick()
-
-            -- Wait a bit for subcategories to expand, then click Potions
-            scheduleEvent(function()
-                -- Find Potions subcategory by searching through children
-                if consumablesWidget.subCategories then
-                    for subId, subData in ipairs(consumablesWidget.subCategories) do
-                        if subData.name == "Potions" then
-                            local potionsWidget = consumablesWidget:getChildById(subId)
-                            if potionsWidget and potionsWidget.Button then
-                                potionsWidget.Button:onClick()
-                                break
-                            end
-                        end
-                    end
-                end
-            end, 300)
-        end
-    end, 500)
-end

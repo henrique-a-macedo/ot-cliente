@@ -833,7 +833,7 @@ local function onQuestLog(questList)
         if _ == 2 and true then
             questCompleted = false
         end
-        local icon = questCompleted and "/game_cyclopedia/images/checkmark-icon" or ""
+        local icon = questCompleted and "/images/ui/checkmark-icon" or ""
         local itemCat = createQuestItem(UITextList.questLogList, id, questName, categoryColor, icon)
         setupQuestItemClickHandler(itemCat, true)
         categoryColor = categoryColor == COLORS.BASE_1 and COLORS.BASE_2 or COLORS.BASE_1

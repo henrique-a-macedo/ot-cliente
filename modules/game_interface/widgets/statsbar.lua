@@ -184,12 +184,10 @@ local function reloadSkillsTab(skills, parent)
         if skillTuple.key == 'experience' then
             widget.level:setText(player:getLevel())
             widget.bar:setValue(player:getLevelPercent(), 100)
+            -- the xp boost button opened the store (removed): it stays hidden and the bar goes to the edge
             widget.bar:removeAnchor(AnchorRight)
-            widget.bar:addAnchor(AnchorRight, 'xpBoostBtn', AnchorLeft)
+            widget.bar:addAnchor(AnchorRight, 'parent', AnchorRight)
             widget.bar:setMarginRight(8)
-            widget.xpBoostBtn:addAnchor(AnchorRight, 'parent', AnchorRight)
-            widget.xpBoostBtn:setVisible(true)
-            --Activate xpBoost icon in this line only
         elseif skillTuple.key == 'magic' then
             widget.level:setText(player:getMagicLevel())
             widget.bar:setValue(player:getMagicLevelPercent(), 100)

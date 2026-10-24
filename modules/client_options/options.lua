@@ -58,17 +58,6 @@ local buttons = { {
         open = "graphicsEffectsPanel"
     } }
 }, {
-    text = "Sound",
-    icon = "/images/icons/icon_sound",
-    open = "soundPanel",
-    subCategories = {{
-        text = "Battle Sounds",
-        open = "battleSoundsPanel"
-    }, {
-        text = "UI Sounds",
-        open = "iuSoundPanel"
-    }} 
-}, {
     text = "Misc.",
     icon = "/images/icons/icon_misc",
     open = "misc",
@@ -86,7 +75,6 @@ local buttons = { {
 
 -- LuaFormatter on
 local extraWidgets = {
-    audioButton = nil,
     optionsButton = nil,
     logoutButton = nil,
     optionsButtons = nil
@@ -159,22 +147,6 @@ end
 
 local function toggleOption(key)
     setOption(key, not getOption(key))
-end
-
--- Toggles mute without discarding the user's previously saved master volume
-local function toggleMute()
-    local current = getOption('soundMaster')
-    if current <= 1 then
-        local restoreVolume = options.soundMaster.lastVolume or g_settings.getNumber('soundMasterLastVolume', 25)
-        if not restoreVolume or restoreVolume <= 1 then
-            restoreVolume = 25
-        end
-        setOption('soundMaster', restoreVolume)
-    else
-        options.soundMaster.lastVolume = current
-        g_settings.set('soundMasterLastVolume', current)
-        setOption('soundMaster', 1)
-    end
 end
 
 local function setupComboBox()
@@ -314,6 +286,10 @@ local function setup()
         end
     end
 
+    -- the sound menu is gone and the server sends no sounds: the master volume stays muted
+    -- (a saved volume above 1 would turn audio back on)
+    setOption('soundMaster', 1, true)
+
     -- Every persisted option has been applied, so widgets that mirror option
     -- values outside of the options panels (e.g. the game_interface top bar
     -- arrows) can now sync themselves with the loaded state.
@@ -402,9 +378,6 @@ function controller:onInit()
         g_settings.setDefault(k, obj.value)
     end
 
-    extraWidgets.audioButton = modules.client_topmenu.addTopRightToggleButton('audioButton', tr('Audio'),
-        '/images/topbuttons/button_mute_up', toggleMute)
-
     extraWidgets.optionsButton = modules.client_topmenu.addTopRightToggleButton('optionsButton', tr('Options'),
         '/images/topbuttons/button_options', toggle)
 
@@ -422,6 +395,7 @@ function controller:onInit()
     panels.interfaceHUD = g_ui.loadUI('styles/interface/HUD', controller.ui.optionsTabContent)
     panels.actionbars = g_ui.loadUI('styles/interface/actionbars', controller.ui.optionsTabContent)
 
+    -- sound panels: no menu entry opens them (sound menu removed), but the sound options still write to them
     panels.soundPanel = g_ui.loadUI('styles/sound/sound', controller.ui.optionsTabContent)
     panels.battleSoundsPanel = g_ui.loadUI('styles/sound/battleSounds', controller.ui.optionsTabContent)
     panels.iuSoundPanel = g_ui.loadUI('styles/sound/uiSounds', controller.ui.optionsTabContent)
@@ -488,14 +462,6 @@ function controller:onInit()
             callback = toggleDisplays,
         }
     })
-
-    Keybind.new("Sound", "Mute/unmute", "", "")
-    Keybind.bind("Sound", "Mute/unmute", {
-        {
-            type = KEY_DOWN,
-            callback = toggleMute,
-        }
-    })
 end
 
 function controller:onTerminate()
@@ -506,14 +472,12 @@ function controller:onTerminate()
     disconnect(g_app, { onExit = onAppExit })
     
     extraWidgets.optionsButton:destroy()
-    extraWidgets.audioButton:destroy()
     panels = {}
     extraWidgets = {}
     buttons = {}
     Keybind.delete("UI", "Toggle Fullscreen")
     Keybind.delete("UI", "Show/hide Creature Names and Bars")
     Keybind.delete("UI", "Show/hide FPS / lag indicator")
-    Keybind.delete("Sound", "Mute/unmute")
 
     terminate_binds()
 end

@@ -797,12 +797,6 @@ function createThingMenu(menuPosition, lookThing, useThing, creatureThing)
                 g_game.requestOutfit()
             end)
 
-            if g_game.getFeature(GamePrey) then
-                menu:addOption(tr('Prey Dialog'), function()
-                    modules.game_prey.show()
-                end)
-            end
-
             if g_game.getFeature(GamePlayerMounts) then
                 if not localPlayer:isMounted() then
                     menu:addOption(tr('Mount'), function()
@@ -1979,7 +1973,8 @@ end
 
 -- Extended view: the console spans the space between the side columns (it follows window resizes and columns
 -- opening/closing); when that space is under EXTENDED_CONSOLE_MIN_WIDTH it is centered at that width instead,
--- over the columns, rather than squeezed.
+-- over the columns, rather than squeezed. The bottom splitter stays visible over the map with the console's width:
+-- dragging it sets the console height, as in the normal view (saved as splitterMarginBottom).
 function layoutExtendedConsole()
     if not isExtendedViewActive or g_platform.isMobile() then
         return
@@ -1996,6 +1991,10 @@ function layoutExtendedConsole()
         gameBottomPanel:setWidth(math.min(EXTENDED_CONSOLE_MIN_WIDTH, gameRootPanel:getWidth()))
         gameBottomPanel:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
     end
+    bottomSplitter:removeAnchor(AnchorLeft)
+    bottomSplitter:removeAnchor(AnchorRight)
+    bottomSplitter:addAnchor(AnchorLeft, 'gameBottomPanel', AnchorLeft)
+    bottomSplitter:addAnchor(AnchorRight, 'gameBottomPanel', AnchorRight)
 end
 
 function layoutExtendedMinimap()
@@ -2042,7 +2041,8 @@ function applyExtendedViewLayout(extendedView)
     local buttons = { leftIncreaseSidePanels, rightIncreaseSidePanels,
         rightDecreaseSidePanels, leftDecreaseSidePanels }
 
-    bottomSplitter:setVisible(not extendedView)
+    -- the splitter stays in both views: it is what resizes the console (layoutExtendedConsole)
+    bottomSplitter:setVisible(not extendedView or not g_platform.isMobile())
     if extendedView then
         for _, btn in ipairs(buttons) do
             btn:hide()
@@ -2103,6 +2103,10 @@ function applyExtendedViewLayout(extendedView)
             gameBottomPanel:addAnchor(AnchorRight, 'gameRightExtraPanel', AnchorLeft)
             gameBottomPanel:addAnchor(AnchorTop, 'gameBottomCooldownPanel', AnchorBottom)
             gameBottomPanel:addAnchor(AnchorBottom, 'parent', AnchorBottom)
+            bottomSplitter:removeAnchor(AnchorLeft)
+            bottomSplitter:removeAnchor(AnchorRight)
+            bottomSplitter:addAnchor(AnchorLeft, 'gameLeftExtraPanel', AnchorRight)
+            bottomSplitter:addAnchor(AnchorRight, 'gameRightExtraPanel', AnchorLeft)
         end
         gameBottomPanel:getChildById('bottomResizeBorder'):disable()
         gameBottomPanel:getChildById('rightResizeBorder'):disable()
@@ -2128,7 +2132,7 @@ end
 
 function toggleInternalFocus()
     for reason, _ in pairs(focusReason) do
-        if reason == 'bosscooldown' then
+        if reason == 'bosscooldown' and modules.game_analyser then
             modules.game_analyser.toggleBossCDFocus(false)
         end
     end

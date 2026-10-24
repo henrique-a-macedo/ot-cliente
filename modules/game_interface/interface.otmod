@@ -11,7 +11,6 @@ Module
     - game_healthinfo
     - game_inventory
     - game_mainpanel
-    - game_prey
     - game_hotkeys
     - game_questlog
     - game_textmessage
@@ -33,12 +32,7 @@ Module
     - game_spelllist
     - game_modaldialog
     - game_shaders
-    - game_shop
     - game_notifications
-    - game_blessing
-    - game_store
-    - game_quickloot
-    - game_cyclopedia
     - game_creatureinformation
 
   @onLoad: init()

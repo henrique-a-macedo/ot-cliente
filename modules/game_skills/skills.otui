@@ -79,9 +79,6 @@ XpBoostButton < UIWidget
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.top: prev.bottom
     margin-top : -7
-    @onClick: |
-      modules.game_store.toggle()
-      g_game.sendRequestStorePremiumBoost()
     $pressed:
       image-source: /images/ui/button-storexp-pressed
 
@@ -532,7 +529,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-physical-resist
+        image-source: /images/game/resist/monster-icon-physical-resist
     SmallSkillButton
       id: fireResist
       visible: false
@@ -541,7 +538,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-fire-resist
+        image-source: /images/game/resist/monster-icon-fire-resist
 
     SmallSkillButton
       id: earthResist
@@ -551,7 +548,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-earth-resist
+        image-source: /images/game/resist/monster-icon-earth-resist
     SmallSkillButton
       id: energyResist
       visible: false
@@ -560,7 +557,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-energy-resist
+        image-source: /images/game/resist/monster-icon-energy-resist
     SmallSkillButton
       id: IceResist
       visible: false
@@ -569,7 +566,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-ice-resist
+        image-source: /images/game/resist/monster-icon-ice-resist
     SmallSkillButton
       id: HolyResist
       visible: false
@@ -578,7 +575,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-holy-resist
+        image-source: /images/game/resist/monster-icon-holy-resist
 
     SmallSkillButton
       id: deathResist
@@ -588,7 +585,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-death-resist
+        image-source: /images/game/resist/monster-icon-death-resist
     SmallSkillButton
       id: HealingResist
       visible: false
@@ -597,7 +594,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-healing-resist
+        image-source: /images/game/resist/monster-icon-healing-resist
     SmallSkillButton
       id: drowResist
       visible: false
@@ -606,7 +603,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-drowning-resist
+        image-source: /images/game/resist/monster-icon-drowning-resist
     SmallSkillButton
       id: lifedrainResist
       visible: false
@@ -615,7 +612,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-lifedrain-resist
+        image-source: /images/game/resist/monster-icon-lifedrain-resist
     SmallSkillButton
       id: manadRainResist
       visible: false
@@ -624,7 +621,7 @@ MiniWindow
       SkillValueLabel
         margin-right: 12
       ImageAbsorb
-        image-source: /game_cyclopedia/images/bestiary/icons/monster-icon-manadrain-resist
+        image-source: /images/game/resist/monster-icon-manadrain-resist
     SmallSkillButton
       id: defenceValue
       visible: false

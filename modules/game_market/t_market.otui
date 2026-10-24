@@ -1458,20 +1458,6 @@ MarketMainWindow < Panel
       color: #dfdfdfff
       @onClick: modules.game_market.createMarketOffer()
 
-    Button
-      id: getPotionsButton
-      size: 108 20
-      anchors.bottom: parent.bottom
-      anchors.left: parent.left
-      image-source: /images/ui/buy-potions-button
-      image-clip: 0 0 108 20
-      visible: false
-      @onClick: modules.game_market.openStorePotions()
-      $hover !pressed:
-        image-clip: 0 0 108 20
-      $pressed:
-        image-clip: 0 20 108 20
-
   HorizontalSeparator
     id: separator
     anchors.bottom: parent.bottom

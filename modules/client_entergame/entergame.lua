@@ -209,13 +209,9 @@ function EnterGame.init()
     enterGame:getChildById('httpLoginBox'):setChecked(httpLogin)
 
     local installedClients = {}
-    if modules.client_assets and modules.client_assets.getInstalledClientVersions then
-        installedClients = modules.client_assets.getInstalledClientVersions()
-    else
-        for _, dirItem in ipairs(g_resources.listDirectoryFiles('/data/things/')) do
-            if tonumber(dirItem) then
-                installedClients[dirItem] = true
-            end
+    for _, dirItem in ipairs(g_resources.listDirectoryFiles('/data/things/')) do
+        if tonumber(dirItem) then
+            installedClients[dirItem] = true
         end
     end
 
@@ -223,13 +219,12 @@ function EnterGame.init()
     for _ in pairs(installedClients) do
         amountInstalledClients = amountInstalledClients + 1
     end
-    local canDownloadAssets = modules.client_assets and modules.client_assets.isEnabled and modules.client_assets.isEnabled()
 
     clientBox = enterGame:getChildById('clientComboBox')
 
     for _, proto in pairs(g_game.getSupportedClients()) do
         local protoStr = tostring(proto)
-        if installedClients[protoStr] or amountInstalledClients == 0 or (canDownloadAssets and proto >= 1281) then
+        if installedClients[protoStr] or amountInstalledClients == 0 then
             installedClients[protoStr] = nil
             clientBox:addOption(proto)
         end
@@ -805,20 +800,13 @@ function EnterGame.doLogin()
     g_settings.set('port', G.port)
     g_settings.set('client-version', clientVersion)
 
-    if clientVersion >= 1281 and modules.client_assets and modules.client_assets.ensureClientVersion and
-        (not modules.client_assets.isEnabled or modules.client_assets.isEnabled()) and
-        not modules.client_assets.isClientVersionInstalled(clientVersion) then
-        modules.client_assets.ensureClientVersion(clientVersion, function(success, message)
-            if success then
-                EnterGame.doLogin()
-                return
-            end
-
-            local errorBox = displayErrorBox(tr('Login Error'), message or tr('Unable to download client assets.'))
-            connect(errorBox, {
-                onOk = EnterGame.show
-            })
-        end)
+    -- assets come with the client (a launcher will ship them); nothing is downloaded here
+    if not g_resources.directoryExists('/data/things/' .. clientVersion) then
+        local errorBox = displayErrorBox(tr('Login Error'),
+            tr('Client files for version %s were not found. Reinstall the client.', clientVersion))
+        connect(errorBox, {
+            onOk = EnterGame.show
+        })
         return
     end
 
