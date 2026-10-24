@@ -1,26 +1,12 @@
 -- this is the first file executed when the application starts
 -- we have to load the first modules form here
 
--- updater
+-- web services (client assets and updates will come from a launcher)
 Services = {
-    --updater = "http://localhost/api/updater.php", --./updater
     --status = "http://localhost/login.php", --./client_entergame | ./client_topmenu
     --websites = "http://localhost/?subtopic=accountmanagement", --./client_entergame "Forgot password and/or email"
     --createAccount = "http://localhost/clientcreateaccount.php", --./client_entergame -- createAccount.lua
     --getCoinsUrl = "http://localhost/?subtopic=shop&step=terms", --./game_market
-    clientAssets = {
-        enabled = true,
-        repository = "dudantas/tibia-client",
-        installSounds = true,
-        strictManifestSha256 = true,
-        allowRawFallbackHashMismatch = false,
-        allowMissingPackedRawFallback = true,
-        preferArchive = true,
-        fallbackToArchiveOnManifestFailure = false,
-        installArchiveExtras = true,
-        archiveExtraPrefixes = { "bin" },
-        installPackagedFiles = true
-    }, -- ./client_assets
 }
 
 --- Enables or disables the entire server configuration block.
@@ -95,8 +81,9 @@ g_app.setName("OTClient - Redemption");
 g_app.setCompactName("otclient");
 g_app.setOrganizationName("otcr");
 
+-- no in-client updater (updates will come from a launcher)
 g_app.hasUpdater = function()
-    return (Services.updater and Services.updater ~= "" and g_modules.getModule("updater"))
+    return false
 end
 
 -- setup logger
@@ -164,7 +151,6 @@ local function loadModules()
 
     -- mods 1000-9999
     g_modules.autoLoadModules(9999)
-    g_modules.ensureModuleLoaded('client_mods')
 
     local script = '/' .. g_app.getCompactName() .. 'rc.lua'
 
@@ -174,12 +160,6 @@ local function loadModules()
 
     -- uncomment the line below so that modules are reloaded when modified. (Note: Use only mod dev)
     -- g_modules.enableAutoReload()
-end
-
--- run updater, must use data.zip
-if g_app.hasUpdater() then
-    g_modules.ensureModuleLoaded("updater")
-    return Updater.init(loadModules)
 end
 
 loadModules()

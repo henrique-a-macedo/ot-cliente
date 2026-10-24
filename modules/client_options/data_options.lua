@@ -881,13 +881,7 @@ return {
                 return
             end
             options.soundMaster.aux = shouldDisable
-            if shouldDisable then
-                g_sounds.setAudioEnabled(false)
-                extraWidgets.audioButton:setIcon('/images/topbuttons/button_mute_pressed')
-            else
-                g_sounds.setAudioEnabled(true)
-                extraWidgets.audioButton:setIcon('/images/topbuttons/button_mute_up')
-            end
+            g_sounds.setAudioEnabled(not shouldDisable)
             local function togglePanel(panel)
                 if not panel then
                     return

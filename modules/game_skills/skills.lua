@@ -798,11 +798,11 @@ function update()
     end
     local xpBoostButton = skillsWindow:recursiveGetChildById('xpBoostButton')
     local xpGainRate = skillsWindow:recursiveGetChildById('xpGainRate')
+    -- the boost button opened the store (removed): only the rate stays
+    xpBoostButton:setVisible(false)
     if g_game.getFeature(GameExperienceBonus) then
-        xpBoostButton:show()
         xpGainRate:show()
     else
-        xpBoostButton:setVisible(false)
         xpGainRate:setVisible(false)
     end
 end

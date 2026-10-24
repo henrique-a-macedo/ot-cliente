@@ -127,7 +127,7 @@ function UIMinimap:setCrossPosition(pos)
     if not self.cross then
         cross = g_ui.createWidget('MinimapCross', self)
         if self:getParent():getId() == "MapBase" then
-            cross:setIcon('/game_cyclopedia/images/icon-map-player')
+            cross:setIcon('/images/game/minimap/icon-map-player')
         else
             cross:setIcon('/images/game/minimap/cross')
         end

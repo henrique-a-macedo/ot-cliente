@@ -332,11 +332,6 @@ TopStatsSkillElement < UIWidget
     anchors.verticalCenter: level.verticalCenter
     margin-left: 2
     cursor: pointinghand
-    @onClick: |
-      if modules.game_store and modules.game_store.toggle then
-        modules.game_store.toggle()
-        g_game.sendRequestStorePremiumBoost()
-      end
     $pressed:
       size: 76 14
       image-source: /images/ui/button-storexp-pressed
@@ -1198,11 +1193,6 @@ BottomStatsSkillElement < UIWidget
     image-source: /images/ui/button-storexp
     anchors.verticalCenter: levelBottom.verticalCenter
     margin-left: 2
-    @onClick: |
-      if modules.game_store and modules.game_store.toggle then
-        modules.game_store.toggle()
-        g_game.sendRequestStorePremiumBoost()
-      end
 
 TopStatsBarLargeOnBottom < UIWidget
   StatsBarBottomWithShrink

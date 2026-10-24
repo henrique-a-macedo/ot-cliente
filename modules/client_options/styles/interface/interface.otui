@@ -76,18 +76,6 @@ UIWidget
       !text: tr('Show spell group cooldowns')
       !tooltip: tr('Can be enabled only in version 8.7x or higher')
 
-  SmallReversedQtPanel
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: prev.bottom
-    height: 22
-    margin-top: 5
-
-    OptionCheckBoxMarked
-      id: showInfoBanner
-      !text: tr('Show Info Banner')
-      !tooltip: tr('Tick this box to display an info banner for certain in-game events.')
-
 
   SmallReversedQtPanel
     anchors.left: parent.left

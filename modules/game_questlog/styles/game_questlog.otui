@@ -78,7 +78,7 @@ TextEditQuestLog < Panel
     anchors.top: SearchEdit.top
     margin-top: 1
     margin-right: 2
-    image-source: /game_cyclopedia/images/button_clear_search
+    image-source: /images/ui/button_clear_search
     image-color: white
     opacity: 0.8
     @onClick: self:getParent():getChildById('SearchEdit'):clearText()
