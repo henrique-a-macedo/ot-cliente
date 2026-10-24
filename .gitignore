@@ -334,3 +334,6 @@ android/build/
 luajit-src/
 CMakeUserPresets.json
 **/.canary-shared-cache/
+
+# python (tools/gen_minimap.py)/
+*.pyc

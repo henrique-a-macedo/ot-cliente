@@ -47,6 +47,8 @@ local mobileConfig = {
     mobileHeightShortcuts = 0
 }
 local isExtendedViewActive = false
+-- in the extended view the console sits between the side columns but never gets narrower than this (small windows)
+local EXTENDED_CONSOLE_MIN_WIDTH = 480
 
 -- Default width of the side panels declared on 'GameSidePanel' (gameinterface.otui).
 local SIDE_PANEL_WIDTH = 176
@@ -169,6 +171,9 @@ function init()
                 addEvent(function()
                     self:fitAll()
                 end)
+            end
+            if newRect.width ~= oldRect.width or newRect.x ~= oldRect.x then
+                addEvent(layoutExtendedConsole) -- a column opened, closed or moved
             end
         end
     end
@@ -506,6 +511,7 @@ function tryLogout(prompt)
 end
 
 function updateStretchShrink()
+    addEvent(layoutExtendedConsole) -- window resized
     if modules.client_options.getOption('dontStretchShrink') and not alternativeView then
         gameMapPanel:setVisibleDimension({
             width = 15,
@@ -1971,6 +1977,27 @@ function getExtendedMinimapHolder()
     return gameRootPanel:getChildById('extendedMinimapHolder')
 end
 
+-- Extended view: the console spans the space between the side columns (it follows window resizes and columns
+-- opening/closing); when that space is under EXTENDED_CONSOLE_MIN_WIDTH it is centered at that width instead,
+-- over the columns, rather than squeezed.
+function layoutExtendedConsole()
+    if not isExtendedViewActive or g_platform.isMobile() then
+        return
+    end
+
+    local free = gameRightExtraPanel:getX() - (gameLeftExtraPanel:getX() + gameLeftExtraPanel:getWidth())
+    gameBottomPanel:removeAnchor(AnchorLeft)
+    gameBottomPanel:removeAnchor(AnchorRight)
+    gameBottomPanel:removeAnchor(AnchorHorizontalCenter)
+    if free >= EXTENDED_CONSOLE_MIN_WIDTH then
+        gameBottomPanel:addAnchor(AnchorLeft, 'gameLeftExtraPanel', AnchorRight)
+        gameBottomPanel:addAnchor(AnchorRight, 'gameRightExtraPanel', AnchorLeft)
+    else
+        gameBottomPanel:setWidth(math.min(EXTENDED_CONSOLE_MIN_WIDTH, gameRootPanel:getWidth()))
+        gameBottomPanel:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+    end
+end
+
 function layoutExtendedMinimap()
     local side = getMinimapSide()
     local holder = getExtendedMinimapHolder()
@@ -2022,9 +2049,14 @@ function applyExtendedViewLayout(extendedView)
         end
 
         if not g_platform.isMobile() then
+            -- the console stays anchored between the side columns, as in the normal view: undocked with a fixed
+            -- width it kept the width it had at that moment (half the screen with a left extra panel open) and
+            -- never followed a window resize. The columns reach the screen bottom, so it does not span over them.
             gameBottomPanel:breakAnchors()
-            gameBottomPanel:bindRectToParent()
-            gameBottomPanel:setDraggable(true)
+            gameBottomPanel:addAnchor(AnchorLeft, 'gameLeftExtraPanel', AnchorRight)
+            gameBottomPanel:addAnchor(AnchorRight, 'gameRightExtraPanel', AnchorLeft)
+            gameBottomPanel:setDraggable(false)
+            gameBottomPanel:getChildById('rightResizeBorder'):disable()
         else
             gameBottomPanel:setWidth(g_window.getWidth() - mobileConfig.mobileWidthJoystick -
                 mobileConfig.mobileWidthShortcuts)
@@ -2032,10 +2064,10 @@ function applyExtendedViewLayout(extendedView)
                 x = mobileConfig.mobileWidthJoystick,
                 y = gameBottomPanel:getY()
             })
+            gameBottomPanel:getChildById('rightResizeBorder'):setMaximum(gameBottomPanel:getWidth())
+            gameBottomPanel:getChildById('rightResizeBorder'):enable()
         end
-        gameBottomPanel:getChildById('rightResizeBorder'):setMaximum(gameBottomPanel:getWidth())
         gameBottomPanel:getChildById('bottomResizeBorder'):enable()
-        gameBottomPanel:getChildById('rightResizeBorder'):enable()
         -- height follows its content, so dragging health/inventory out leaves no dead space above the column
         gameMainRightPanel:getLayout():setFitChildren(true)
         gameMainRightPanel:setHeight(0)
@@ -2043,6 +2075,7 @@ function applyExtendedViewLayout(extendedView)
         gameMainRightPanel:setImageColor('alpha')
         gameBottomPanel:addAnchor(AnchorTop, 'gameBottomActionPanel', AnchorBottom)
         gameBottomPanel:addAnchor(AnchorBottom, 'parent', AnchorBottom)
+        addEvent(layoutExtendedConsole) -- once the columns have their final geometry
         gameLeftActionPanel:setImageSource(nil)
         gameRightActionPanel:setImageSource(nil)
         gameLeftActionPanel:setBorderWidthRight(0)

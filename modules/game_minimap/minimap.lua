@@ -66,7 +66,11 @@ function mapController:onGameStart()
         loadFnc = g_map.loadOtcm
     end
 
-    if g_resources.fileExists(minimapFile) then
+    -- data/minimap.otmm is the whole map, already explored (tools/gen_minimap.py); a player's own file is a subset
+    -- of it, and loading it afterwards would replace whole blocks with partly unseen ones
+    if otmm and g_resources.fileExists('/data/minimap.otmm') then
+        loadFnc('/data/minimap.otmm')
+    elseif g_resources.fileExists(minimapFile) then
         loadFnc(minimapFile)
     end
 
