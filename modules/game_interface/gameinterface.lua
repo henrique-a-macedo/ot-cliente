@@ -1974,27 +1974,28 @@ end
 -- Extended view: the console spans the space between the side columns (it follows window resizes and columns
 -- opening/closing); when that space is under EXTENDED_CONSOLE_MIN_WIDTH it is centered at that width instead,
 -- over the columns, rather than squeezed. The bottom splitter stays visible over the map with the console's width:
--- dragging it sets the console height, as in the normal view (saved as splitterMarginBottom).
+-- dragging it sets the console height, as in the normal view (saved as splitterMarginBottom). The splitter gets the
+-- same horizontal anchors as the console, never the console itself: the action/stats bars anchor to the splitter and
+-- the console anchors below them, so splitter -> console would be an anchor loop (the layout recursed until the
+-- client crashed).
 function layoutExtendedConsole()
     if not isExtendedViewActive or g_platform.isMobile() then
         return
     end
 
     local free = gameRightExtraPanel:getX() - (gameLeftExtraPanel:getX() + gameLeftExtraPanel:getWidth())
-    gameBottomPanel:removeAnchor(AnchorLeft)
-    gameBottomPanel:removeAnchor(AnchorRight)
-    gameBottomPanel:removeAnchor(AnchorHorizontalCenter)
-    if free >= EXTENDED_CONSOLE_MIN_WIDTH then
-        gameBottomPanel:addAnchor(AnchorLeft, 'gameLeftExtraPanel', AnchorRight)
-        gameBottomPanel:addAnchor(AnchorRight, 'gameRightExtraPanel', AnchorLeft)
-    else
-        gameBottomPanel:setWidth(math.min(EXTENDED_CONSOLE_MIN_WIDTH, gameRootPanel:getWidth()))
-        gameBottomPanel:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+    for _, widget in ipairs({ gameBottomPanel, bottomSplitter }) do
+        widget:removeAnchor(AnchorLeft)
+        widget:removeAnchor(AnchorRight)
+        widget:removeAnchor(AnchorHorizontalCenter)
+        if free >= EXTENDED_CONSOLE_MIN_WIDTH then
+            widget:addAnchor(AnchorLeft, 'gameLeftExtraPanel', AnchorRight)
+            widget:addAnchor(AnchorRight, 'gameRightExtraPanel', AnchorLeft)
+        else
+            widget:setWidth(math.min(EXTENDED_CONSOLE_MIN_WIDTH, gameRootPanel:getWidth()))
+            widget:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+        end
     end
-    bottomSplitter:removeAnchor(AnchorLeft)
-    bottomSplitter:removeAnchor(AnchorRight)
-    bottomSplitter:addAnchor(AnchorLeft, 'gameBottomPanel', AnchorLeft)
-    bottomSplitter:addAnchor(AnchorRight, 'gameBottomPanel', AnchorRight)
 end
 
 function layoutExtendedMinimap()
@@ -2105,6 +2106,7 @@ function applyExtendedViewLayout(extendedView)
             gameBottomPanel:addAnchor(AnchorBottom, 'parent', AnchorBottom)
             bottomSplitter:removeAnchor(AnchorLeft)
             bottomSplitter:removeAnchor(AnchorRight)
+            bottomSplitter:removeAnchor(AnchorHorizontalCenter)
             bottomSplitter:addAnchor(AnchorLeft, 'gameLeftExtraPanel', AnchorRight)
             bottomSplitter:addAnchor(AnchorRight, 'gameRightExtraPanel', AnchorLeft)
         end
