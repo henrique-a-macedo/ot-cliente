@@ -37,6 +37,29 @@ function UIItem:onDragLeave(droppedWidget, mousePos)
     return true
 end
 
+-- weapons belong in the weapon slot and shields in the shield slot (the server refuses the other hand): a drop on
+-- the wrong hand goes to the right one, where an equipped item is swapped by the server. The appearance 'clothes'
+-- slot tells them apart: 0 two-handed, 6 one-handed weapon, 5 shield.
+local function handSlotFor(item, toPos)
+    if toPos.x ~= 65535 or (toPos.y ~= InventorySlotLeft and toPos.y ~= InventorySlotRight) then
+        return toPos
+    end
+    local thingType = g_things.getThingType(item:getId(), ThingCategoryItem)
+    if not thingType or not thingType:isCloth() then
+        return toPos
+    end
+    local clothSlot = thingType:getClothSlot()
+    local slot
+    if clothSlot == 0 or clothSlot == 6 then
+        slot = InventorySlotLeft
+    elseif clothSlot == 5 then
+        slot = InventorySlotRight
+    else
+        return toPos
+    end
+    return { x = toPos.x, y = slot, z = toPos.z }
+end
+
 function UIItem:onDrop(widget, mousePos, forced)
     self:setBorderWidth(0)
 
@@ -74,6 +97,8 @@ function UIItem:onDrop(widget, mousePos, forced)
     if itemPos.x ~= 65535 and not itemTile then
         return false
     end
+
+    toPos = handSlotFor(item, toPos)
 
     if itemPos.x == toPos.x and itemPos.y == toPos.y and itemPos.z == toPos.z then
         return false
