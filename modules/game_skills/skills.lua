@@ -70,6 +70,46 @@ end
 local ATTRIBUTE_OPCODE = 120
 local ATTRIBUTE_ROWS = { str = 'attrStr', dex = 'attrDex', int = 'attrInt', vit = 'attrVit' }
 
+-- tooltip math mirrors forgottenserver/data/scripts/lib/attributes.lua (attackMultiplier, defenseReduction,
+-- VIT_PHYSICAL_WEIGHT, INT_MAGIC_WEIGHT, SUPPRESSION_AMOUNT, *_REGEN_PER_POINT); keep both in sync
+local function attackMultiplier(points)
+    if points <= 0 then
+        return 1
+    end
+    return 1 + (points / 100) ^ 0.9
+end
+
+local function defenseReduction(points)
+    return 0.75 * points / (points + 120)
+end
+
+local function percent(fraction)
+    return string.format('%.1f%%', fraction * 100)
+end
+
+local function attributeTooltip(id, values)
+    local str, dex, int, vit = values.str or 0, values.dex or 0, values.int or 0, values.vit or 0
+    local physical = percent(defenseReduction(str + vit * 1.5))
+    if id == 'str' then
+        return tr('Strength: melee weapon damage and physical defense.') .. '\n' ..
+            tr('Melee damage: x%.2f', attackMultiplier(str)) .. '\n' ..
+            tr('Physical damage taken: -%s (with Vitality)', physical)
+    elseif id == 'dex' then
+        return tr('Dexterity: bow, crossbow and throwing damage, and a chance to suppress magic hits.') .. '\n' ..
+            tr('Distance damage: x%.2f', attackMultiplier(dex)) .. '\n' ..
+            tr('Chance to cut a magic hit by 40%%: %s', percent(defenseReduction(dex)))
+    elseif id == 'int' then
+        return tr('Intelligence: wand, spell and healing power, magic defense and mana regeneration.') .. '\n' ..
+            tr('Spell, wand and healing power: x%.2f', attackMultiplier(int)) .. '\n' ..
+            tr('Magic damage taken: -%s', percent(defenseReduction(int * 0.2))) .. '\n' ..
+            tr('Mana regeneration: +%d every 2 seconds', math.floor(int * 0.1))
+    elseif id == 'vit' then
+        return tr('Vitality: physical defense and health regeneration.') .. '\n' ..
+            tr('Physical damage taken: -%s (with Strength)', physical) .. '\n' ..
+            tr('Health regeneration: +%d every 2 seconds', math.floor(vit * 0.1))
+    end
+end
+
 local function onAttributesMessage(protocol, opcode, buffer)
     if not skillsWindow then
         return
@@ -85,11 +125,13 @@ local function onAttributesMessage(protocol, opcode, buffer)
         local row = skillsWindow:recursiveGetChildById(rowId)
         row:getChildById('value'):setText(tostring(values[id] or 0))
         row:getChildById('add'):setVisible(free > 0)
+        row:setTooltip(attributeTooltip(id, values))
     end
 
     local freeRow = skillsWindow:recursiveGetChildById('attrFree')
     freeRow:getChildById('value'):setText(tostring(free))
     freeRow:setVisible(free > 0)
+    freeRow:setTooltip(tr('Points to spend: click + next to an attribute. You get 5 points every 5 levels.'))
 end
 
 function addAttributePoint(id)
