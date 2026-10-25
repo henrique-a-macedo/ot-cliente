@@ -1984,20 +1984,11 @@ function onTalk(name, level, mode, message, channelId, creaturePos)
         local staticText = StaticText.create()
         local staticMessage = message
         if isNpcMode then
-            local highlightedText = getHighlightedText(staticMessage, speaktype.color, "#1f9ffe")
-
-            local processedText = staticMessage
-            local colorPattern = "{([^,]+),[ ]*[^}]+}"
-            for textContent in highlightedText:gmatch(colorPattern) do
-                local plainText = textContent:gsub("%[text%-event%](.-)%[/text%-event%]", "%1")
-                -- remove possible no-underline marker (0x01) inserted by getHighlightedText
-                if plainText:sub(1,1) == string.char(1) then
-                    plainText = plainText:sub(2)
-                end
-                processedText = processedText:gsub("{" .. textContent .. "}", plainText)
-            end
-            processedText = processedText:gsub("{([^}]+)}", "%1")
-            staticMessage = processedText
+            -- the text over the NPC has no highlight: "{word}" (or "{word, color}") shows as plain "word". The old code
+            -- fed the highlight markup ("[text-event]...") to gsub as a pattern and printed "{help? you?"
+            staticMessage = staticMessage:gsub("{([^}]*)}", function(content)
+                return content:match("^([^,]*)")
+            end)
             staticText:setColor(speaktype.color)
         end
 

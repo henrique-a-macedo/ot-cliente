@@ -175,6 +175,58 @@ local function onSoulChange(localPlayer, soul)
     end
 end
 
+-- blessings icon (the blessings window is gone; the icon keeps showing the state: grey, gold or green)
+local BLESSINGS_LIST = {
+    { flag = Blessings.Adventurer,         name = "Adventurer's Blessing" },
+    { flag = Blessings.TwistOfFate,        name = "Twist of Fate"         },
+    { flag = Blessings.WisdomOfSolitude,   name = "Wisdom of Solitude"    },
+    { flag = Blessings.SparkOfPhoenix,     name = "Spark of the Phoenix"  },
+    { flag = Blessings.FireOfSuns,         name = "Fire of the Suns"      },
+    { flag = Blessings.SpiritualShielding, name = "Spiritual Shielding"   },
+    { flag = Blessings.EmbraceOfTibia,     name = "Embrace of Tibia"      },
+    { flag = Blessings.HeartOfMountain,    name = "Heart of the Mountain" },
+    { flag = Blessings.BloodOfMountain,    name = "Blood of the Mountain" },
+}
+
+-- blessVisualState sent by the server
+local BLESSINGS_ICONS = {
+    [1] = '/images/inventory/button_blessings_grey',
+    [2] = '/images/inventory/button_blessings_gold',
+    [3] = '/images/inventory/button_blessings_green',
+}
+
+local function onBlessingsChange(player, blessings, oldBlessings, blessVisualState)
+    local hasAdventurerBlessing = Bit.hasBit(blessings, Blessings.Adventurer)
+    if hasAdventurerBlessing ~= Bit.hasBit(oldBlessings, Blessings.Adventurer) then
+        toggleAdventurerStyle(hasAdventurerBlessing)
+    end
+
+    local tooltip
+    if blessings == Blessings.None then
+        tooltip = tr('You are currently not protected by any blessing.')
+    else
+        local lines = { tr('You are protected by the following blessings:') }
+        for _, blessing in ipairs(BLESSINGS_LIST) do
+            if Bit.hasBit(blessings, blessing.flag) then
+                lines[#lines + 1] = '- ' .. blessing.name
+            end
+        end
+        tooltip = table.concat(lines, '\n')
+    end
+
+    -- both inventory sizes have the icon
+    local image = BLESSINGS_ICONS[blessVisualState]
+    for _, panel in ipairs({ inventoryController.ui.offPanel, inventoryController.ui.onPanel }) do
+        local button = panel.blessings
+        if button then
+            button:setTooltip(tooltip)
+            if image then
+                button:setImageSource(image)
+            end
+        end
+    end
+end
+
 local function onFreeCapacityChange(player, freeCapacity)
     if not player then
         return
@@ -291,7 +343,8 @@ function inventoryController:onInit()
     inventoryController:registerEvents(LocalPlayer, {
         onInventoryChange = inventoryEvent,
         onSoulChange = onSoulChange,
-        onFreeCapacityChange = onFreeCapacityChange
+        onFreeCapacityChange = onFreeCapacityChange,
+        onBlessingsChange = onBlessingsChange
     })
 end
 

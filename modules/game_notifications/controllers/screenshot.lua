@@ -89,7 +89,8 @@ function screenshot_onGameStart()
     })
     optionPanel:recursiveGetChildById("keepBlacklog"):disable() -- no compatibility 11/07/24
    
-    modules.client_options.addButton("Misc.", "Screenshot", optionPanel)
+    -- no menu entry (removed from the options); the panel keeps the settings the screenshot logic reads
+    optionPanel:hide()
 end
 
 function screenshot_onGameEnd()

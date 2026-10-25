@@ -1,4 +1,3 @@
-local HOTKEY = 'Ctrl+Y'
 local MAP_SHADERS = { {
     name = 'Map - Default',
     frag = nil
@@ -158,25 +157,11 @@ function ShaderController:onInit()
     for _, opts in pairs(TEXT_SHADERS) do
         registerShader(opts, 'setupTextShader')
     end
-
-    Keybind.new('Windows', 'show/hide Shader Windows', HOTKEY, '')
-    Keybind.bind('Windows', 'show/hide Shader Windows', {
-        {
-            type = KEY_DOWN,
-            callback = function()
-                if ShaderController.ui then
-                    ShaderController:unloadHtml()
-                else
-                    ShaderController:open()
-                end
-            end,
-        }
-    })
+    -- the shader window has no way in (its Ctrl+Y hotkey is gone); the shaders stay registered for reuse
 end
 
 function ShaderController:onTerminate()
     g_shaders.clear()
-    Keybind.delete('Windows', 'show/hide Shader Windows')
 end
 
 function ShaderController:onGameStart()
