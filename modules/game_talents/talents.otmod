@@ -1,0 +1,8 @@
+Module
+  name: game_talents
+  description: Talent and paragon trees drawn as nodes (server opcode 123)
+  author: henrique
+  sandboxed: true
+  scripts: [ talents ]
+  @onLoad: init()
+  @onUnload: terminate()

@@ -1,0 +1,88 @@
+TalentNode < UIButton
+  size: 92 46
+  background-color: #1e1e1e
+  border-width: 2
+  border-color: #4a4a4a
+  font: verdana-11px-rounded
+  color: #dfdfdf
+  text-wrap: true
+  text-align: center
+  text-offset: 0 -6
+
+  $hover:
+    background-color: #2a2a2a
+
+  Label
+    id: rank
+    anchors.bottom: parent.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+    margin-bottom: 3
+    font: verdana-9px-rounded
+    color: #a0a0a0
+    text-auto-resize: true
+    phantom: true
+
+// a straight piece of a connector line between two nodes
+TalentLink < UIWidget
+  background-color: #5a5a5a
+  phantom: true
+
+MainWindow
+  id: talentsWindow
+  !text: tr('Talents')
+  size: 560 380
+  visible: false
+  @onEscape: modules.game_talents.hide()
+
+  Button
+    id: talentTab
+    !text: tr('Talents')
+    width: 90
+    anchors.top: parent.top
+    anchors.left: parent.left
+    @onClick: modules.game_talents.open('talent')
+
+  Button
+    id: paragonTab
+    !text: tr('Paragon')
+    width: 90
+    anchors.top: parent.top
+    anchors.left: talentTab.right
+    margin-left: 4
+    @onClick: modules.game_talents.open('paragon')
+
+  Label
+    id: points
+    anchors.verticalCenter: talentTab.verticalCenter
+    anchors.right: parent.right
+    color: #8fd18f
+    text-auto-resize: true
+
+  UIWidget
+    id: canvas
+    anchors.top: talentTab.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: resultLabel.top
+    margin-top: 8
+    margin-bottom: 6
+    background-color: #00000055
+    border-width: 1
+    border-color: #2a2a2a
+
+  Label
+    id: resultLabel
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    height: 20
+    text-wrap: true
+
+  Button
+    id: closeButton
+    !text: tr('Close')
+    width: 70
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_talents.hide()
