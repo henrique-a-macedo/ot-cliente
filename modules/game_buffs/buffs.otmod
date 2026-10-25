@@ -1,0 +1,8 @@
+Module
+  name: game_buffs
+  description: Floating buff and debuff bars with time left (server opcode 122)
+  author: henrique
+  sandboxed: true
+  scripts: [ buffs ]
+  @onLoad: init()
+  @onUnload: terminate()
