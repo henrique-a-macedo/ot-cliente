@@ -396,6 +396,10 @@ local function unbindMovingKeys()
 end
 
 local function bindMovingKeys()
+    -- bindKey* appends callbacks: onGameStart and load() both get here, and a second bind made every WASD tap
+    -- walk twice. Start from a clean slate so binding is idempotent.
+    unbindMovingKeys()
+
     local gameWalk = modules.game_walk
     gameWalk.bindWalkKey('W', North)
     gameWalk.bindWalkKey('D', East)
