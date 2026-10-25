@@ -174,16 +174,51 @@ function terminate()
     Keybind.delete("UI", "Toggle Top Menu")
 end
 
+-- in game with the extended view the bar shrinks to its buttons and floats over the game: the player drags it by
+-- the grip and locks it with a right click (FloatingPanel); the login screen keeps the full-width bar
+local floating = false
+local FLOATING_GRIP_WIDTH = 16
+
+local function fitFloatingWidth()
+    if floating then
+        topMenu:setWidth(FLOATING_GRIP_WIDTH + topLeftButtonsPanel:getWidth() + topLeftTogglesPanel:getWidth())
+    end
+end
+
+local function setFloating(enabled)
+    if enabled == floating then
+        return
+    end
+    floating = enabled
+    topMenu.floatingGrip:setVisible(enabled)
+    if enabled then
+        modules.game_interface.getRootPanel():addAnchor(AnchorTop, 'parent', AnchorTop)
+        FloatingPanel.attach(topMenu, 'topMenu')
+        fitFloatingWidth()
+        FloatingPanel.restore(topMenu, { x = topMenu:getParent():getWidth() - topMenu:getWidth() - 4, y = 4 })
+        topMenu:show()
+        topMenu:raise()
+        connect(topLeftTogglesPanel, { onGeometryChange = fitFloatingWidth })
+        connect(topLeftButtonsPanel, { onGeometryChange = fitFloatingWidth })
+    else
+        disconnect(topLeftTogglesPanel, { onGeometryChange = fitFloatingWidth })
+        disconnect(topLeftButtonsPanel, { onGeometryChange = fitFloatingWidth })
+        FloatingPanel.detach(topMenu)
+    end
+end
+
 function hide()
     topMenu:hide()
-    modules.game_interface.getRootPanel():addAnchor(AnchorTop, 'parent', AnchorTop)
+    if not floating then
+        modules.game_interface.getRootPanel():addAnchor(AnchorTop, 'parent', AnchorTop)
+    end
 end
 
 function show()
     topMenu:show()
     topMenu:raise()
     topMenu:focus()
-    if modules.game_interface.currentViewMode == 2 then
+    if not floating and modules.game_interface.currentViewMode == 2 then
         modules.game_interface.getRootPanel():addAnchor(AnchorTop, 'topMenu', AnchorBottom)
     end
 end
@@ -192,6 +227,9 @@ function online()
     showGameButtons()
 
     addEvent(function()
+        if modules.game_interface.currentViewMode == 2 and g_game.isOnline() then
+            setFloating(true)
+        end
         if modules.game_interface.currentViewMode ~= 2 and g_game.isOnline() then
             hide()
         end
@@ -235,6 +273,10 @@ end
 
 function offline()
     hideGameButtons()
+    if floating then
+        setFloating(false)
+        extendedView(modules.game_interface.currentViewMode == 2)
+    end
     pingLabel:hide()
     if pingPanel then
         pingPanel:hide()
@@ -499,6 +541,11 @@ function extendedView(extendedView)
     if not topMenu then
         return
     end
+    if extendedView and g_game.isOnline() then
+        setFloating(true)
+        return
+    end
+    setFloating(false)
     topMenu:breakAnchors()
     if extendedView then
         topMenu:show()
