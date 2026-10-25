@@ -402,10 +402,11 @@ MiniWindow
         !text: tr('Life Leech Chance')
       SkillValueLabel
 
+    // "Amount" is shortened: the full name plus a two-decimal value does not fit the window width
     SmallSkillButton
       id: skillId10
       SkillNameLabel
-        !text: tr('Life Leech Amount')
+        !text: tr('Life Leech Amt.')
       SkillValueLabel
 
     SmallSkillButton
@@ -417,32 +418,10 @@ MiniWindow
     SmallSkillButton
       id: skillId12
       SkillNameLabel
-        !text: tr('Mana Leech Amount')
+        !text: tr('Mana Leech Amt.')
       SkillValueLabel
 
-    SmallSkillButton
-      id: skillId13
-      SkillNameLabel
-        !text: tr('Fatal')
-      SkillValueLabel
-
-    SmallSkillButton
-      id: skillId14
-      SkillNameLabel
-        !text: tr('Dodge')
-      SkillValueLabel
-
-    SmallSkillButton
-      id: skillId15
-      SkillNameLabel
-        !text: tr('Momentum')
-      SkillValueLabel
-
-    SmallSkillButton
-      id: skillId16
-      SkillNameLabel
-        !text: tr('Transcendence')
-      SkillValueLabel
+    // Fatal, Dodge, Momentum and Transcendence (skillId13-16) are gone: the server has no forge skills
 
     // 14.12
     SmallSkillButton

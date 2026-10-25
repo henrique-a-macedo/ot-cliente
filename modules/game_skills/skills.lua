@@ -184,13 +184,8 @@ local SKILL_GROUPS = {
     },
     GameAdditionalSkills = {
         'skillId7', 'skillId8', 'skillId9', 'skillId10', 'skillId11', 'skillId12'
-    },
-    GameForgeSkillStats = {
-        'skillId13', 'skillId14', 'skillId15'
-    },
-    GameForgeSkillStats1332 = {
-        'skillId16'
     }
+    -- forge skills (Fatal, Dodge, Momentum, Transcendence: skillId13-16) were removed from the window
 }
 
 local function setSkillGroupVisibility(groupName, visible)
@@ -294,20 +289,16 @@ local function hideOldClientStats()
     local features = {
         newAppearance = g_game.getFeature(GameEnterGameShowAppearance),
         charSkills = g_game.getFeature(GameCharacterSkillStats),
-        additionalSkills = g_game.getFeature(GameAdditionalSkills),
-        forgeSkills = g_game.getFeature(GameForgeSkillStats)
+        additionalSkills = g_game.getFeature(GameAdditionalSkills)
     }
     if features.newAppearance then
         skillsWindow:recursiveGetChildById('regenerationTime'):getChildByIndex(1):setText('Food')
         skillsWindow:recursiveGetChildById('experience'):getChildByIndex(1):setText('XP')
     end
-    local version = g_game.getClientVersion()
     setSkillGroupVisibility('offence', features.charSkills)
     setSkillGroupVisibility('defence', features.charSkills)
     setSkillGroupVisibility('misc', features.charSkills)
     setSkillGroupVisibility('GameAdditionalSkills', features.additionalSkills)
-    setSkillGroupVisibility('GameForgeSkillStats1332', features.forgeSkills and version >= 1332)
-    setSkillGroupVisibility('GameForgeSkillStats', features.forgeSkills)
 end
 
 local function hideMenuOptionsForOldClients(menu)
@@ -600,15 +591,21 @@ function expToAdvance(currentLevel, currentExp)
     return expForLevel(currentLevel + 1) - currentExp
 end
 
+-- the lookups below tolerate missing rows: the server still sends skills whose rows were removed (forge skills)
 function resetSkillColor(id)
     local skill = skillsWindow:recursiveGetChildById(id)
+    if not skill then
+        return
+    end
     local widget = skill:getChildById('value')
     widget:setColor('#bbbbbb')
 end
 
 function toggleSkill(id, state)
     local skill = skillsWindow:recursiveGetChildById(id)
-    skill:setVisible(state)
+    if skill then
+        skill:setVisible(state)
+    end
 end
 
 function setSkillBase(id, value, baseValue)
@@ -616,6 +613,9 @@ function setSkillBase(id, value, baseValue)
         return
     end
     local skill = skillsWindow:recursiveGetChildById(id)
+    if not skill then
+        return
+    end
     local widget = skill:getChildById('value')
 
     if value > baseValue then
@@ -642,8 +642,9 @@ function setSkillValue(id, value)
         if usePercentage then
             local needsDecimals = (id == 'skillId10' or id == 'skillId12')
             local displayValue = needsDecimals and (value / 100) or value
+            -- leech amount keeps up to two decimals, without trailing zeros: 0%, 5.5%, 5.25%
             local text = needsDecimals
-                and string.format("%.2f%%", displayValue)
+                and (string.format("%.2f", displayValue):gsub("%.?0+$", "") .. "%")
                 or (displayValue .. "%")
         
             widget:setText(text)
@@ -980,7 +981,7 @@ function skillController:onGameEnd()
         expSpeedEvent = nil
     end
     
-    local allGroups = {'offence', 'defence', 'misc', 'GameAdditionalSkills', 'GameForgeSkillStats', 'GameForgeSkillStats1332'}
+    local allGroups = {'offence', 'defence', 'misc', 'GameAdditionalSkills'}
     for _, groupName in pairs(allGroups) do
         local skills = SKILL_GROUPS[groupName]
         if skills then
@@ -1379,8 +1380,7 @@ local function setSkillValueWithTooltips(id, value, tooltip, showPercentage, col
     
     if g_game.getClientVersion() < 1412 then
         local oldClientStats = {
-            'skillId7', 'skillId8', 'skillId9', 'skillId10', 'skillId11', 'skillId12', 
-            'skillId13', 'skillId14', 'skillId15', 'skillId16',
+            'skillId7', 'skillId8', 'skillId9', 'skillId10', 'skillId11', 'skillId12',
             'damageHealing', 'attackValue', 'convertedDamage', 'convertedElement',
             'criticalHit', 'lifeLeech', 'manaLeech', 'criticalChance', 'criticalExtraDamage', 'onslaught',
             'physicalResist', 'fireResist', 'earthResist', 'energyResist', 'IceResist', 
