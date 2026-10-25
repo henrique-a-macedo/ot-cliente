@@ -33,16 +33,49 @@ end
 mapController = Controller:new()
 mapController:setUI('minimap', modules.game_interface.getMainRightPanel())
 
-function mapController:onInit()
-    -- keep only the +/- and floor up/down buttons drawn over the map
-    self.ui.minimapBorder.minimap:getChildById('resetButton'):hide()
+-- extended view: while the title bar is dragged, a translucent box shows where the minimap will land
+local dropGhost = nil
 
+local function sideAt(mousePos)
+    return mousePos.x < rootWidget:getWidth() / 2 and 'left' or 'right'
+end
+
+local function placeDropGhost(side)
+    local gameRoot = modules.game_interface.getRootPanel()
+    local holder = modules.game_interface.getExtendedMinimapHolder()
+    local width, height = holder:getWidth(), holder:getHeight()
+    local x = side == 'left' and gameRoot:getX() or gameRoot:getX() + gameRoot:getWidth() - width
+    dropGhost:setRect({ x = x, y = holder:getY(), width = width, height = height })
+end
+
+local function destroyDropGhost()
+    if dropGhost then
+        dropGhost:destroy()
+        dropGhost = nil
+    end
+end
+
+function mapController:onInit()
     local dragHandle = self.ui:getChildById('dragHandle')
-    dragHandle.onDragEnter = function()
+    dragHandle.onDragEnter = function(widget, mousePos)
+        destroyDropGhost()
+        dropGhost = g_ui.createWidget('UIWidget', rootWidget)
+        dropGhost:setPhantom(true)
+        dropGhost:setBackgroundColor('#ffffff18')
+        dropGhost:setBorderWidth(1)
+        dropGhost:setBorderColor('#ffffff80')
+        placeDropGhost(sideAt(mousePos))
+        return true
+    end
+    dragHandle.onDragMove = function(widget, mousePos, mouseMoved)
+        if dropGhost then
+            placeDropGhost(sideAt(mousePos))
+        end
         return true
     end
     dragHandle.onDragLeave = function(widget, droppedWidget, mousePos)
-        modules.game_interface.setMinimapSide(mousePos.x < rootWidget:getWidth() / 2 and 'left' or 'right')
+        destroyDropGhost()
+        modules.game_interface.setMinimapSide(sideAt(mousePos))
         return true
     end
 end
@@ -89,6 +122,7 @@ function mapController:onGameEnd()
 end
 
 function mapController:onTerminate()
+    destroyDropGhost()
     if iconTopMenu then
         iconTopMenu:destroy()
         iconTopMenu = nil
