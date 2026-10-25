@@ -1,0 +1,97 @@
+PouchGroupTitle < Label
+  font: verdana-11px-antialised
+  color: #e0e0e0
+  height: 18
+  text-offset: 2 3
+
+PouchRow < UIWidget
+  height: 38
+  background-color: #ffffff0a
+  margin-bottom: 2
+
+  Item
+    id: icon
+    size: 32 32
+    virtual: true
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 3
+
+  Label
+    id: name
+    anchors.left: icon.right
+    anchors.right: withdraw.left
+    anchors.top: parent.top
+    margin-left: 6
+    margin-top: 4
+    color: #dfdfdf
+
+  Label
+    id: amount
+    anchors.left: name.left
+    anchors.right: name.right
+    anchors.top: name.bottom
+    margin-top: 2
+    color: #8fd18f
+
+  Button
+    id: withdraw
+    !text: tr('Withdraw')
+    width: 70
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 4
+
+MainWindow
+  id: pouchWindow
+  !text: tr('Currency Pouch')
+  size: 330 380
+  visible: false
+  @onEscape: modules.game_pouch.hide()
+
+  Label
+    id: hint
+    !text: tr('Kept outside your bags: no weight, no slot. Use a stone item to put it here.')
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    text-wrap: true
+    text-auto-resize: true
+    color: #a0a0a0
+
+  ScrollablePanel
+    id: list
+    anchors.top: hint.bottom
+    anchors.left: parent.left
+    anchors.right: listScroll.left
+    anchors.bottom: resultLabel.top
+    margin-top: 6
+    margin-bottom: 6
+    vertical-scrollbar: listScroll
+    layout:
+      type: verticalBox
+
+  VerticalScrollBar
+    id: listScroll
+    anchors.top: list.top
+    anchors.bottom: list.bottom
+    anchors.right: parent.right
+    step: 20
+    pixels-scroll: true
+
+  Label
+    id: resultLabel
+    anchors.left: parent.left
+    anchors.right: closeButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    height: 20
+    text-wrap: true
+
+  Button
+    id: closeButton
+    !text: tr('Close')
+    width: 70
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_pouch.hide()

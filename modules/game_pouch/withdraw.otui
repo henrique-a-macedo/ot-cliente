@@ -1,0 +1,51 @@
+// the withdraw modal: how many to take out as items
+MainWindow
+  id: withdrawWindow
+  !text: tr('Withdraw')
+  size: 260 140
+  visible: false
+  @onEscape: modules.game_pouch.cancelWithdraw()
+  @onEnter: modules.game_pouch.confirmWithdraw()
+
+  Label
+    id: what
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
+    text-wrap: true
+    text-auto-resize: true
+
+  SpinBox
+    id: count
+    anchors.top: what.bottom
+    anchors.left: parent.left
+    width: 90
+    margin-top: 8
+    minimum: 1
+    maximum: 1
+
+  Button
+    id: allButton
+    !text: tr('All')
+    width: 50
+    anchors.left: count.right
+    anchors.verticalCenter: count.verticalCenter
+    margin-left: 6
+    @onClick: modules.game_pouch.withdrawAll()
+
+  Button
+    id: cancelButton
+    !text: tr('Cancel')
+    width: 70
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_pouch.cancelWithdraw()
+
+  Button
+    id: okButton
+    !text: tr('Withdraw')
+    width: 70
+    anchors.right: cancelButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    @onClick: modules.game_pouch.confirmWithdraw()
