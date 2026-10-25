@@ -15,7 +15,6 @@ panels = {
     interface = nil,
     misc = nil,
     miscHelp = nil,
-    keybindsPanel = nil,
     battleSoundsPanel = nil,
     iuSoundPanel = nil,
 }
@@ -33,11 +32,7 @@ local buttons = { {
 
     text = "Controls",
     icon = "/images/icons/icon_controls",
-    open = "generalPanel",
-    subCategories = { {
-        text = "General Hotkeys",
-        open = "keybindsPanel"
-    } }
+    open = "generalPanel"
 }, {
     text = "Interface",
     icon = "/images/icons/icon_interface",
@@ -60,17 +55,7 @@ local buttons = { {
 }, {
     text = "Misc.",
     icon = "/images/icons/icon_misc",
-    open = "misc",
-    subCategories = { --[[ {
-        text = "GamePlay",
-        open = "GamePlay"
-    },  {
-        text = "Screenshots",
-        open = "Screenshots"
-    }, ]] {
-        text = "Help",
-        open = "miscHelp"
-    } }
+    open = "miscHelp"
 } }
 
 -- LuaFormatter on
@@ -128,19 +113,17 @@ local function syncProtocolSoundSettings(key)
 end
 
 local function toggleDisplays()
-    if options['displayNames'].value and options['displayHealth'].value and options['displayMana'].value and options['displayHarmony'].value then
+    if options['displayNames'].value and options['displayHealth'].value and options['displayMana'].value then
         setOption('displayNames', false)
     elseif options['displayHealth'].value then
         setOption('displayHealth', false)
         setOption('displayMana', false)
-        setOption('displayHarmony', false)
     else
         if not options['displayNames'].value and not options['displayHealth'].value then
             setOption('displayNames', true)
         else
             setOption('displayHealth', true)
             setOption('displayMana', true)
-            setOption('displayHarmony', true)
         end
     end
 end
@@ -152,10 +135,7 @@ end
 local function setupComboBox()
     local crosshairCombo = panels.interface:recursiveGetChildById('crosshair')
     local antialiasingModeCombobox = panels.graphicsPanel:recursiveGetChildById('antialiasingMode')
-    local floorViewModeCombobox = panels.graphicsEffectsPanel:recursiveGetChildById('floorViewMode')
     local framesRarityCombobox = panels.interface:recursiveGetChildById('frames')
-    local vocationPresetsCombobox = panels.keybindsPanel:recursiveGetChildById('list')
-    local listKeybindsPanel = panels.keybindsPanel:recursiveGetChildById('list')
     local mouseControlModeCombobox = panels.generalPanel:recursiveGetChildById('mouseControlMode')
     local lootControlModeCombobox = panels.generalPanel:recursiveGetChildById('lootControlMode')
 
@@ -195,15 +175,6 @@ local function setupComboBox()
         setOption('antialiasingMode', comboBox:getCurrentOption().data)
     end
 
-
-    for k, t in pairs({ 'Normal', 'Fade', 'Locked', 'Always', 'Always with transparency' }) do
-        floorViewModeCombobox:addOption(t, k - 1)
-    end
-
-    floorViewModeCombobox.onOptionChange = function(comboBox, option)
-        setOption('floorViewMode', comboBox:getCurrentOption().data)
-    end
-
     for k, v in pairs({ { 'None', 'none' }, { 'Frames', 'frames' }, { 'Corners', 'corners' } }) do
         framesRarityCombobox:addOption(v[1], v[2])
     end
@@ -212,15 +183,6 @@ local function setupComboBox()
         setOption('framesRarity', comboBox:getCurrentOption().data)
     end
 
-    local profileCombobox = panels.misc:recursiveGetChildById('profile')
-
-    for i = 1, 10 do
-        profileCombobox:addOption(tostring(i), i)
-    end
-
-    profileCombobox.onOptionChange = function(comboBox, option)
-        setOption('profile', comboBox:getCurrentOption().data)
-    end
 
     local soundDeviceCombobox = panels.soundPanel:recursiveGetChildById('soundDevice')
     if soundDeviceCombobox then
@@ -248,13 +210,6 @@ local function setupComboBox()
         soundDeviceCombobox:setCurrentOptionByData(currentDevice, true)
     end
 
-    for _, preset in ipairs(Keybind.presets) do
-        listKeybindsPanel:addOption(preset)
-    end
-    listKeybindsPanel.onOptionChange = function(comboBox, option)
-        setOption('listKeybindsPanel', option)
-    end
-    panels.keybindsPanel.presets.list:setCurrentOption(Keybind.currentPreset)
 end
 
 local function setup()
@@ -289,6 +244,8 @@ local function setup()
     -- the sound menu is gone and the server sends no sounds: the master volume stays muted
     -- (a saved volume above 1 would turn audio back on)
     setOption('soundMaster', 1, true)
+    -- the native cursor checkbox is gone: always use the game cursor (a saved 'true' would bring it back)
+    setOption('nativeCursor', false, true)
 
     -- Every persisted option has been applied, so widgets that mirror option
     -- values outside of the options panels (e.g. the game_interface top bar
@@ -385,7 +342,6 @@ function controller:onInit()
         '/images/topbuttons/logout', toggle)
 
     panels.generalPanel = g_ui.loadUI('styles/controls/general', controller.ui.optionsTabContent)
-    panels.keybindsPanel = g_ui.loadUI('styles/controls/keybinds', controller.ui.optionsTabContent)
 
     panels.graphicsPanel = g_ui.loadUI('styles/graphics/graphics', controller.ui.optionsTabContent)
     panels.graphicsEffectsPanel = g_ui.loadUI('styles/graphics/effects', controller.ui.optionsTabContent)
@@ -393,14 +349,12 @@ function controller:onInit()
     panels.interface = g_ui.loadUI('styles/interface/interface', controller.ui.optionsTabContent)
     panels.interfaceConsole = g_ui.loadUI('styles/interface/console', controller.ui.optionsTabContent)
     panels.interfaceHUD = g_ui.loadUI('styles/interface/HUD', controller.ui.optionsTabContent)
-    panels.actionbars = g_ui.loadUI('styles/interface/actionbars', controller.ui.optionsTabContent)
 
     -- sound panels: no menu entry opens them (sound menu removed), but the sound options still write to them
     panels.soundPanel = g_ui.loadUI('styles/sound/sound', controller.ui.optionsTabContent)
     panels.battleSoundsPanel = g_ui.loadUI('styles/sound/battleSounds', controller.ui.optionsTabContent)
     panels.iuSoundPanel = g_ui.loadUI('styles/sound/uiSounds', controller.ui.optionsTabContent)
 
-    panels.misc = g_ui.loadUI('styles/misc/misc', controller.ui.optionsTabContent)
     panels.miscHelp = g_ui.loadUI('styles/misc/help', controller.ui.optionsTabContent)
 
     self.ui:hide()
@@ -437,7 +391,6 @@ function controller:onInit()
         end
     end, 1000)  -- 1 second delay to make sure everything is loaded
     
-    init_binds()
 
     Keybind.new("UI", "Toggle Fullscreen", "Ctrl+Shift+F", "")
     Keybind.bind("UI", "Toggle Fullscreen", {
@@ -479,22 +432,9 @@ function controller:onTerminate()
     Keybind.delete("UI", "Show/hide Creature Names and Bars")
     Keybind.delete("UI", "Show/hide FPS / lag indicator")
 
-    terminate_binds()
 end
 
 function controller:onGameStart()
-    if g_settings.getBoolean("autoSwitchPreset") then
-        local name = g_game.getCharacterName()
-        if Keybind.selectPreset(name) then
-            panels.keybindsPanel.presets.list:setCurrentOption(name, true)
-            updateKeybinds()
-            if modules.game_actionbar and modules.game_actionbar.selectHotkeySet then
-                if not modules.game_actionbar.selectHotkeySet(name) then
-                    g_logger.warning(string.format("[client_options] Failed to sync action bar hotkey set '%s' on startup.", name))
-                end
-            end
-        end
-    end
     if not g_game.getFeature(GameEffectSource) then
         panels.graphicsEffectsPanel.clientEffectOpacity:show()
         panels.graphicsEffectsPanel.clientMissileOpacity:show()
@@ -618,7 +558,6 @@ function toggle()
         end
     end
     show()
-    updateKeybinds()
 end
 
 function addTab(name, panel, icon)

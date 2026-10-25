@@ -439,9 +439,6 @@ function addKeyCombo(keyCombo, keySettings, focus)
     if not keyCombo then
         return
     end
-    if modules.game_actionbar and modules.game_actionbar.removeHotkeyFromActionBar then
-        modules.game_actionbar.removeHotkeyFromActionBar(keyCombo)
-    end
     local hotkeyLabel = currentHotkeys:getChildById(keyCombo)
     if not hotkeyLabel then
         hotkeyLabel = g_ui.createWidget('HotkeyListLabel')
