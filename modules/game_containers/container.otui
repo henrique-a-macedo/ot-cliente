@@ -39,8 +39,10 @@ ContainerWindow < MiniWindow
     id: upButton
     anchors.top: minimizeButton.top
     anchors.right: minimizeButton.left
-    margin-right: 3
-    size: 14 14
+    margin-right: 4
+    size: 12 12
+    image-size: 14 14
+    !tooltip: tr('Open the container this one is in')
     image-source: /images/ui/miniwindow_buttons
     image-clip: 42 0 14 14
 

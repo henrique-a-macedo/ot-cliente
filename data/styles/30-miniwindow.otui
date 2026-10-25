@@ -76,6 +76,7 @@ MiniWindow < UIMiniWindow
 
   UIButton
     id: closeButton
+    !tooltip: tr('Close')
     anchors.top: parent.top
     anchors.right: parent.right
     margin-top: 2
@@ -93,6 +94,7 @@ MiniWindow < UIMiniWindow
 
   UIButton
     id: minimizeButton
+    !tooltip: tr('Minimize or restore')
     anchors.top: closeButton.top
     anchors.right: closeButton.left
     margin-right: 1
@@ -118,6 +120,7 @@ MiniWindow < UIMiniWindow
 
   UIButton
     id: toggleFilterButton
+    !tooltip: tr('Show or hide filters')
     anchors.top: minimizeButton.top
     anchors.right: minimizeButton.left
     margin-right: 7
@@ -144,6 +147,7 @@ MiniWindow < UIMiniWindow
 
   UIButton
     id: contextMenuButton
+    !tooltip: tr('More options')
     anchors.top: prev.top
     anchors.right: prev.left
     margin-right: 2
@@ -161,6 +165,7 @@ MiniWindow < UIMiniWindow
 
   UIButton
     id: newWindowButton
+    !tooltip: tr('Open another window like this one')
     anchors.top: prev.top
     anchors.right: prev.left
     margin-right: 2
@@ -181,6 +186,7 @@ MiniWindow < UIMiniWindow
 
   UIButton
     id: lockButton
+    !tooltip: tr('Lock or unlock the window position')
     anchors.top: prev.top
     anchors.right: prev.left
     margin-right: 2
