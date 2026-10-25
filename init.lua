@@ -64,6 +64,15 @@ if ENABLE_SERVERS then
             protocol = 1310,
             httpLogin = true,
             useAuthenticator = false
+        },
+        -- Local rehearsal of production (arch/deploy/local): HAProxy edge -> Caddy -> TFS in Docker.
+        -- Caddy uses its internal self-signed certificate. 127.0.0.1, not localhost: on Windows localhost resolves
+        -- to ::1 first, which Docker Desktop does not forward.
+        ["https://127.0.0.1"] = {
+            port = 443,
+            protocol = 1310,
+            httpLogin = true,
+            useAuthenticator = false
         }
         -- External server
         ---
