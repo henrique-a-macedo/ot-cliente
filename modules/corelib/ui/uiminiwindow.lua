@@ -100,11 +100,13 @@ function UIMiniWindow:setup()
 
     local lockButton = self:getChildById('lockButton')
     if lockButton then
+        -- the lock has its own state: modules toggle 'draggable' on every click (containers do), so it
+        -- cannot tell whether the window is locked
         lockButton.onClick = function()
-            if self:isDraggable() then
-                self:lock()
-            else
+            if self:isLocked() then
                 self:unlock()
+            else
+                self:lock()
             end
         end
     end
@@ -219,7 +221,7 @@ end
 
 function UIMiniWindow:onDragEnter(mousePos)
     local parent = self:getParent()
-    if not parent then
+    if not parent or self:isLocked() then
         return false
     end
 
@@ -537,11 +539,16 @@ function UIMiniWindow:isResizeable()
     return resizeBorder:isExplicitlyVisible() and resizeBorder:isEnabled()
 end
 
+function UIMiniWindow:isLocked()
+    return self.locked == true
+end
+
 function UIMiniWindow:lock(dontSave)
     local lockButton = self:getChildById('lockButton')
     if lockButton then
         lockButton:setOn(true)
     end
+    self.locked = true
     self:setDraggable(false)
     self:setBorderWidth(1)
     self:setBorderColor('#d33c3c')
@@ -559,6 +566,7 @@ function UIMiniWindow:unlock(dontSave)
     if lockButton then
         lockButton:setOn(false)
     end
+    self.locked = false
     self:setDraggable(true)
     self:setBorderWidth(0)
     if not dontSave then

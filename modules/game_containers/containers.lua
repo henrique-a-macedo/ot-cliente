@@ -1092,11 +1092,12 @@ function onContainerOpen(container, previousContainer)
                         mousePos.x <= winX + winW - TOLERANCE_HORIZONTAL and
                         mousePos.y >= winY + TOLERANCE_VERTICAL and 
                         mousePos.y <= winY + winH - TOLERANCE_VERTICAL
-        containerWindow:setDraggable(inBounds and containerWindow:getChildByPos(mousePos) ~= containerPanel)
+        containerWindow:setDraggable(not containerWindow:isLocked() and inBounds and
+            containerWindow:getChildByPos(mousePos) ~= containerPanel)
         return inBounds
     end
     containerWindow.onMouseRelease = function(widget, mousePos, mouseButton)
-        containerWindow:setDraggable(true)
+        containerWindow:setDraggable(not containerWindow:isLocked())
     end
     containerWindow.onDrop = function(container, widget, mousePos)
         if containerPanel:getChildByPos(mousePos) then
