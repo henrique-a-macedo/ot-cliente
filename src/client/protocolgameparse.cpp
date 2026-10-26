@@ -3821,11 +3821,31 @@ void ProtocolGame::parseExtendedOpcode(const InputMessagePtr& msg)
 
     if (opcode == 0) {
         m_enableSendExtendedOpcode = true;
-    } else if (opcode == 2) {
-        parsePingBack(msg);
-    } else {
-        callLuaField("onExtendedOpcode", opcode, buffer);
+        return;
     }
+    if (opcode == 2) {
+        parsePingBack(msg);
+        return;
+    }
+
+    // anticheat: "cfg;<interval seconds>", 0 turns it off; handled here, never passed to Lua
+    if (opcode == ANTICHEAT_OPCODE) {
+        if (!buffer.starts_with("cfg;")) {
+            g_logger.warning("[anticheat] unexpected message on opcode {}: '{}'", opcode, buffer);
+            return;
+        }
+        const auto value = buffer.substr(4);
+        uint32_t interval = 0;
+        const auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), interval);
+        if (ec == std::errc{} && ptr == value.data() + value.size()) {
+            startAnticheat(interval);
+        } else {
+            g_logger.warning("[anticheat] invalid cfg: '{}'", buffer);
+        }
+        return;
+    }
+
+    callLuaField("onExtendedOpcode", opcode, buffer);
 }
 
 void ProtocolGame::parseChangeMapAwareRange(const InputMessagePtr& msg)

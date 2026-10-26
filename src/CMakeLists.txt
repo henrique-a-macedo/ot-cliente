@@ -369,6 +369,7 @@ set(SOURCE_FILES
         framework/net/protocol.cpp
         framework/net/protocolhttp.cpp
         framework/net/httplogin.cpp
+        framework/net/launcherbridge.cpp
         framework/net/server.cpp
         framework/html/queryselector.cpp
         framework/html/htmlnode.cpp
@@ -459,6 +460,7 @@ set(SOURCE_FILES
         client/uiprogressrect.cpp
         client/uisprite.cpp
         tools/datdump.cpp
+        anticheat/anticheat.cpp
 )
 
 if (TOGGLE_FRAMEWORK_GRAPHICS)
@@ -569,6 +571,36 @@ elseif(UNIX AND NOT ANDROID AND NOT WASM)
 endif()
 
 add_library(otclient_core STATIC ${SOURCE_FILES})
+
+# *****************************************************************************
+# [AC] Anti-cheat DLL (Windows only, distribution client)
+# *****************************************************************************
+if(MSVC AND NOT WASM AND NOT ANDROID)
+  add_library(otclient_ac SHARED anticheat/otclient_ac.cpp)
+
+  # psapi.lib for K32EnumProcessModules / K32GetModuleFileNameExW
+  target_link_libraries(otclient_ac PRIVATE psapi)
+
+  # same compile flags as otclient_core (PUBLIC there, so we repeat here)
+  target_compile_options(otclient_ac PRIVATE /MP /FS /Zf /EHsc /bigobj)
+
+  # same output folder as the .exe (mirrors TOGGLE_BIN_FOLDER below)
+  if(TOGGLE_BIN_FOLDER)
+    set_target_properties(otclient_ac PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+  else()
+    set_target_properties(otclient_ac PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/"
+    )
+  endif()
+
+  # not built by default; build with: cmake --build . --target otclient_ac
+  set_target_properties(otclient_ac PROPERTIES EXCLUDE_FROM_ALL ON)
+endif()
+# *****************************************************************************
+# [AC] end
+# *****************************************************************************
 
 target_link_libraries(otclient_core PRIVATE unofficial::inih::inireader)
 
@@ -707,7 +739,7 @@ if(MSVC)
     if(ANDROID)
       find_package(Vorbis CONFIG REQUIRED)
     endif()
-    foreach(msvc_target IN ITEMS otclient_core ${PROJECT_NAME})
+    foreach(msvc_target IN ITEMS otclient_core ${PROJECT_NAME} otclient_ac)
       if(TARGET ${msvc_target})
         set_property(TARGET ${msvc_target} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
       endif()
@@ -720,7 +752,7 @@ if(MSVC)
     if(NOT DEFINED VCPKG_TARGET_TRIPLET)
       set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
     endif()
-    foreach(msvc_target IN ITEMS otclient_core ${PROJECT_NAME})
+    foreach(msvc_target IN ITEMS otclient_core ${PROJECT_NAME} otclient_ac)
       if(TARGET ${msvc_target})
         set_property(TARGET ${msvc_target} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
       endif()
