@@ -67,13 +67,30 @@ end
 local ATTRIBUTE_OPCODE = 120
 local ATTRIBUTE_ROWS = { str = 'attrStr', dex = 'attrDex', int = 'attrInt', vit = 'attrVit' }
 
--- tooltip math mirrors forgottenserver/data/scripts/lib/attributes.lua (attackMultiplier, defenseReduction,
--- VIT_PHYSICAL_WEIGHT, INT_MAGIC_WEIGHT, SUPPRESSION_AMOUNT, *_REGEN_PER_POINT); keep both in sync
-local function attackMultiplier(points)
+-- tooltip math mirrors forgottenserver/data/scripts/lib/attributes.lua (power, weaponPower, healingPower weights,
+-- guard, accuracy, defenseReduction, VIT_PHYSICAL_WEIGHT, INT_MAGIC_WEIGHT, SUPPRESSION_AMOUNT, *_REGEN_PER_POINT);
+-- keep both in sync. There are no skills nor magic level: damage and healing come from these powers.
+local function power(level, points)
+    return (level / 3 + 20 * math.sqrt(math.max(0, points))) * 1.1
+end
+
+local function weaponPower(level, points)
+    return (level / 3 + 200 / 100 ^ 0.35 * math.max(0, points) ^ 0.35) * 1.1
+end
+
+local function guard(str, vit, dex)
+    local points = str + vit + dex * 0.5
     if points <= 0 then
-        return 1
+        return 10
     end
-    return 1 + (points / 100) ^ 0.9
+    return math.max(10, math.floor(24 * points ^ 0.3))
+end
+
+local function accuracy(dex)
+    if dex <= 0 then
+        return 0
+    end
+    return math.floor(30 * dex ^ 0.3)
 end
 
 local function defenseReduction(points)
@@ -86,22 +103,29 @@ end
 
 local function attributeTooltip(id, values)
     local str, dex, int, vit = values.str or 0, values.dex or 0, values.int or 0, values.vit or 0
+    local player = g_game.getLocalPlayer()
+    local level = player and player:getLevel() or 1
     local physical = percent(defenseReduction(str + vit * 1.5))
+    local healing = math.floor(power(level, int) + vit * 0.7 + str * 0.3)
     if id == 'str' then
-        return tr('Strength: melee weapon damage and physical defense.') .. '\n' ..
-            tr('Melee damage: x%.2f', attackMultiplier(str)) .. '\n' ..
+        return tr('Strength: melee weapons and their spells, blocking, physical defense and a little healing.') .. '\n' ..
+            tr('Melee power: %d', math.floor(weaponPower(level, str))) .. '\n' ..
+            tr('Blocking: %d (with Vitality and Dexterity)', guard(str, vit, dex)) .. '\n' ..
             tr('Physical damage taken: -%s (with Vitality)', physical)
     elseif id == 'dex' then
-        return tr('Dexterity: bow, crossbow and throwing damage, and a chance to suppress magic hits.') .. '\n' ..
-            tr('Distance damage: x%.2f', attackMultiplier(dex)) .. '\n' ..
+        return tr('Dexterity: bows, crossbows and throwing weapons, accuracy, and a chance to suppress magic hits.') .. '\n' ..
+            tr('Distance power: %d', math.floor(weaponPower(level, dex))) .. '\n' ..
+            tr('Accuracy: %d', accuracy(dex)) .. '\n' ..
             tr('Chance to cut a magic hit by 40%%: %s', percent(defenseReduction(dex)))
     elseif id == 'int' then
-        return tr('Intelligence: wand, spell and healing power, magic defense and mana regeneration.') .. '\n' ..
-            tr('Spell, wand and healing power: x%.2f', attackMultiplier(int)) .. '\n' ..
+        return tr('Intelligence: spells, runes and healing, wands, magic defense and mana regeneration.') .. '\n' ..
+            tr('Spellpower: %d', math.floor(power(level, int))) .. '\n' ..
+            tr('Healing power: %d (with Vitality and Strength)', healing) .. '\n' ..
             tr('Magic damage taken: -%s', percent(defenseReduction(int * 0.2))) .. '\n' ..
             tr('Mana regeneration: +%d every 2 seconds', math.floor(int * 0.1))
     elseif id == 'vit' then
-        return tr('Vitality: physical defense and health regeneration.') .. '\n' ..
+        return tr('Vitality: physical defense, healing power, blocking and health regeneration.') .. '\n' ..
+            tr('Healing power: %d (with Intelligence and Strength)', healing) .. '\n' ..
             tr('Physical damage taken: -%s (with Strength)', physical) .. '\n' ..
             tr('Health regeneration: +%d every 2 seconds', math.floor(vit * 0.1))
     end
