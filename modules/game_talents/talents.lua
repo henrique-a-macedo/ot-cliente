@@ -117,7 +117,8 @@ local function render(data)
         widget.rank:setText(node.maxRank > 0 and string.format('%d/%d', node.rank, node.maxRank) or tostring(node.rank))
         local state = nodeState(node)
         widget:setBorderColor(BORDER[state])
-        widget:setOpacity(state == 'blocked' and 0.6 or 1)
+        -- nodes stay opaque so the connector lines pass behind them; a blocked node only dims its text
+        widget:setColor(state == 'blocked' and '#7a7a7a' or '#dfdfdf')
         widget:setTooltip(tooltip(node))
         local nodeId = node.id
         widget.onClick = function()
