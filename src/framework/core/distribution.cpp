@@ -71,6 +71,9 @@ namespace
         DistMount{ "modules.otpkg", "/modules" },
     };
 
+    // loaded by src/anticheat/anticheat.cpp; must be in the signed manifest and match it
+    constexpr const char* DIST_ANTICHEAT_DLL = "otclient_ac.dll";
+
     // what may come from the user write dir (settings, minimap cache, logs); never code, shaders or assets
     constexpr std::array<std::string_view, 5> DIST_WRITE_DIR_EXTENSIONS{ ".otml", ".otmm", ".json", ".txt", ".log" };
 
@@ -328,6 +331,10 @@ bool distribution::mountVerifiedPackages(const std::string& workDir)
     }
     g_distWorkDir = dir;
     g_distExpected = std::move(expected);
+
+    // the anti-cheat library is part of the client: without it, or with another one, the client does not start
+    if (lockVerifiedFile(DIST_ANTICHEAT_DLL).empty())
+        return false;
 
     if (!canRead("/init.lua") || !PHYSFS_exists("init.lua")) {
         g_logger.error("distribution: init.lua is not in the packages");

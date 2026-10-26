@@ -6,10 +6,12 @@
  *
  * Telemetry only: it never blocks anything, it only reports. Each finding is
  * "<kind>:<detail>", detail limited to [A-Za-z0-9._-] and 64 chars.
- *   proc:<exe>   known cheat/bot/debugger running
- *   dbg:local | dbg:remote   debugger attached
- *   mod:<dll>    module loaded from outside Windows/ and client folder
- *   inj:<pct>    share of synthetic keyboard/mouse events while client had focus
+ *   proc:<exe>     known cheat/bot/debugger running
+ *   dbg:local | dbg:remote     debugger attached
+ *   mod:<dll>      module loaded from outside Windows/ and the client folder
+ *   inj:<pct>      share of synthetic keyboard/mouse events while the client had focus
+ *   handle:<exe>   another process holds a read/write handle to our memory
+ *   patch:text     the client's own code (.text) is on writable pages (a hook patched it)
  *
  * otac_scan is BLOCKING and relatively expensive (process snapshot,
  * module enumeration). Call it from a worker thread, never from the UI thread.
@@ -228,6 +230,125 @@ namespace
         if (total >= MIN_INPUT_EVENTS && injected * 100 >= INJECTED_PERCENT * total)
             findings.push_back("inj:" + std::to_string(injected * 100 / total));
     }
+
+    // ---- open handles to our own process (another program reading/writing our memory) ----
+    // NtQuerySystemInformation(SystemExtendedHandleInformation) is not in the public headers; declare what we read.
+    constexpr auto SystemExtendedHandleInformation = 64;
+    constexpr long STATUS_INFO_LENGTH_MISMATCH = static_cast<long>(0xC0000004);
+
+    struct SYSTEM_HANDLE_ENTRY
+    {
+        void* object;
+        ULONG_PTR processId;
+        ULONG_PTR handle;
+        ULONG grantedAccess;
+        USHORT creatorBackTraceIndex;
+        USHORT objectTypeIndex;
+        ULONG handleAttributes;
+        ULONG reserved;
+    };
+    struct SYSTEM_HANDLE_INFORMATION_EX
+    {
+        ULONG_PTR count;
+        ULONG_PTR reserved;
+        SYSTEM_HANDLE_ENTRY handles[1];
+    };
+
+    std::string processName(DWORD pid)
+    {
+        const HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+        if (!process)
+            return "_";
+        wchar_t path[MAX_PATH] = {};
+        DWORD size = MAX_PATH;
+        std::string name = "_";
+        if (QueryFullProcessImageNameW(process, 0, path, &size)) {
+            const std::wstring full = lower(path);
+            const auto slash = full.find_last_of(L"\\/");
+            name = detail(slash == std::wstring::npos ? full : full.substr(slash + 1));
+        }
+        CloseHandle(process);
+        return name;
+    }
+
+    void scanOpenHandles(std::vector<std::string>& findings)
+    {
+        using Query = long(NTAPI*)(int, void*, ULONG, ULONG*);
+        const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+        const auto query = ntdll ? reinterpret_cast<Query>(GetProcAddress(ntdll, "NtQuerySystemInformation")) : nullptr;
+        if (!query)
+            return;
+
+        std::vector<char> buffer(1 << 20);
+        ULONG needed = 0;
+        for (long status = STATUS_INFO_LENGTH_MISMATCH; status == STATUS_INFO_LENGTH_MISMATCH;) {
+            status = query(SystemExtendedHandleInformation, buffer.data(), static_cast<ULONG>(buffer.size()), &needed);
+            if (status == STATUS_INFO_LENGTH_MISMATCH)
+                buffer.resize(buffer.size() * 2);
+            else if (status < 0)
+                return;
+        }
+
+        const auto* info = reinterpret_cast<const SYSTEM_HANDLE_INFORMATION_EX*>(buffer.data());
+        const auto ourPid = static_cast<ULONG_PTR>(GetCurrentProcessId());
+
+        // our own process object (kernel pointer): the entry for the real handle we hold to ourselves
+        const HANDLE self = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, GetCurrentProcessId());
+        const void* ourObject = nullptr;
+        for (ULONG_PTR i = 0; i < info->count && self; ++i) {
+            const auto& entry = info->handles[i];
+            if (entry.processId == ourPid && entry.handle == reinterpret_cast<ULONG_PTR>(self)) {
+                ourObject = entry.object;
+                break;
+            }
+        }
+        if (self)
+            CloseHandle(self);
+        if (!ourObject)
+            return;
+
+        // another process holding a handle to us that can read or write our memory
+        constexpr ULONG poke = PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION;
+        for (ULONG_PTR i = 0; i < info->count; ++i) {
+            const auto& entry = info->handles[i];
+            if (entry.object == ourObject && entry.processId != ourPid && (entry.grantedAccess & poke))
+                findings.push_back("handle:" + processName(static_cast<DWORD>(entry.processId)));
+        }
+    }
+
+    // ---- our own code made writable (a hook patches .text after marking it writable) ----
+    void scanCodeIntegrity(std::vector<std::string>& findings)
+    {
+        const auto base = reinterpret_cast<const char*>(GetModuleHandleW(nullptr));
+        if (!base)
+            return;
+        const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+        if (dos->e_magic != IMAGE_DOS_SIGNATURE)
+            return;
+        const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+        if (nt->Signature != IMAGE_NT_SIGNATURE)
+            return;
+
+        const auto* section = IMAGE_FIRST_SECTION(nt);
+        for (WORD s = 0; s < nt->FileHeader.NumberOfSections; ++s) {
+            if (std::strncmp(reinterpret_cast<const char*>(section[s].Name), ".text", 6) != 0)
+                continue;
+            const char* start = base + section[s].VirtualAddress;
+            const char* end = start + section[s].Misc.VirtualSize;
+            for (const char* at = start; at < end;) {
+                MEMORY_BASIC_INFORMATION mbi{};
+                if (VirtualQuery(at, &mbi, sizeof(mbi)) == 0)
+                    break;
+                constexpr DWORD writable = PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+                if (mbi.Protect & writable) {
+                    findings.emplace_back("patch:text");
+                    return;
+                }
+                at = static_cast<const char*>(mbi.BaseAddress) + mbi.RegionSize;
+            }
+            return;
+        }
+    }
 } // namespace
 
 extern "C" __declspec(dllexport) int otac_version() { return AC_VERSION; }
@@ -261,6 +382,8 @@ extern "C" __declspec(dllexport) int otac_scan(char* out, int size)
     scanDebugger(findings);
     scanModules(findings);
     scanInput(findings);
+    scanOpenHandles(findings);
+    scanCodeIntegrity(findings);
 
     std::ranges::sort(findings);
     findings.erase(std::unique(findings.begin(), findings.end()), findings.end());
