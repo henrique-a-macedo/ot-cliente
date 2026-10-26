@@ -42,8 +42,8 @@ local function showLauncherNotice()
 end
 
 -- back on the login screen (logout, connection lost): the launcher trades its session for a new ticket, so the
--- password is not asked again; at most once every RENEW_INTERVAL seconds, so a ticket that keeps failing ends in the
--- notice instead of a loop
+-- password is not asked again. A renewed ticket whose login fails waits RENEW_INTERVAL seconds before the next try
+-- (it ends in the notice instead of a loop); a login that works clears the wait (onCharacterList)
 local RENEW_INTERVAL = 15
 local lastRenewal = -RENEW_INTERVAL
 local renewing = false
@@ -129,6 +129,9 @@ local function onSessionKey(protocol, sessionKey)
 end
 
 local function onCharacterList(protocol, characters, account, otui)
+    -- the login worked: the next trip back to the login screen may ask the launcher again right away
+    lastRenewal = -RENEW_INTERVAL
+
     local httpLogin = enterGame:getChildById('httpLoginBox'):isChecked()
 
     -- Try add server to the server list
