@@ -104,35 +104,45 @@ g_logger.info(g_app.getName() .. ' ' .. g_app.getVersion() .. ' rev ' .. g_app.g
     g_app.getBuildCommit() .. ') built on ' .. g_app.getBuildDate() .. ' for arch ' ..
     g_app.getBuildArch())
 
+-- DISTRIBUTION_BUILD (set by the C++, OPTIONS_DISTRIBUTION): the player client. data/, modules/ and this file
+-- come from the packages signed through the launcher, already mounted; no debugger, mods, loose packages or
+-- otclientrc.lua (see framework/core/distribution.h)
+
 -- setup lua debugger
-if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
+if not DISTRIBUTION_BUILD and os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
     require("lldebugger").start()
     g_logger.debug("Started LUA debugger.")
 else
     g_logger.debug("LUA debugger not started (not launched with VSCode local-lua).")
 end
 
--- add data directory to the search path
-if not g_resources.addSearchPath(g_resources.getWorkDir() .. 'data', true) then
-    g_logger.fatal('Unable to add data directory to the search path.')
-end
+if not DISTRIBUTION_BUILD then
+    -- add data directory to the search path
+    if not g_resources.addSearchPath(g_resources.getWorkDir() .. 'data', true) then
+        g_logger.fatal('Unable to add data directory to the search path.')
+    end
 
--- add modules directory to the search path
-if not g_resources.addSearchPath(g_resources.getWorkDir() .. 'modules', true) then
-    g_logger.fatal('Unable to add modules directory to the search path.')
+    -- add modules directory to the search path
+    if not g_resources.addSearchPath(g_resources.getWorkDir() .. 'modules', true) then
+        g_logger.fatal('Unable to add modules directory to the search path.')
+    end
 end
 
 g_html.addGlobalStyle('/data/styles/html.css')
 g_html.addGlobalStyle('/data/styles/custom.css')
 
 -- try to add mods path too
-g_resources.addSearchPath(g_resources.getWorkDir() .. 'mods', true)
+if not DISTRIBUTION_BUILD then
+    g_resources.addSearchPath(g_resources.getWorkDir() .. 'mods', true)
+end
 
 -- setup directory for saving configurations
 g_resources.setupUserWriteDir(('%s/'):format(g_app.getCompactName()))
 
 -- search all packages
-g_resources.searchAndAddPackages('/', '.otpkg', true)
+if not DISTRIBUTION_BUILD then
+    g_resources.searchAndAddPackages('/', '.otpkg', true)
+end
 
 -- load settings
 g_configs.loadSettings('/config.otml')
@@ -158,13 +168,15 @@ local function loadModules()
     g_modules.autoLoadModules(999)
     g_modules.ensureModuleLoaded('game_interface')
 
-    -- mods 1000-9999
-    g_modules.autoLoadModules(9999)
+    if not DISTRIBUTION_BUILD then
+        -- mods 1000-9999
+        g_modules.autoLoadModules(9999)
 
-    local script = '/' .. g_app.getCompactName() .. 'rc.lua'
+        local script = '/' .. g_app.getCompactName() .. 'rc.lua'
 
-    if g_resources.fileExists(script) then
-        dofile(script)
+        if g_resources.fileExists(script) then
+            dofile(script)
+        end
     end
 
     -- uncomment the line below so that modules are reloaded when modified. (Note: Use only mod dev)

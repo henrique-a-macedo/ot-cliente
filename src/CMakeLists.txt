@@ -18,6 +18,9 @@ option(ASAN_ENABLED "Build this target with AddressSanitizer" OFF)
 option(BUILD_STATIC_LIBRARY "Build using static libraries" OFF)
 option(TOGGLE_PRE_COMPILED_HEADER "Use precompiled header (speed up compile)" ON)
 option(SPEED_UP_BUILD_UNITY "Compile using build unity for speed up build" ON)
+# Distribution build: only runs packages signed through the launcher (framework/core/distribution.h)
+option(OPTIONS_DISTRIBUTION "Build the player client: signed packages only, no mods/otclientrc/debugger" OFF)
+set(OTC_MANIFEST_PUBLIC_KEY "" CACHE STRING "Launcher manifest ed25519 public key (base64), required by OPTIONS_DISTRIBUTION")
 
 if (TOGGLE_FRAMEWORK_PROTOBUF)
   # Protobuf
@@ -126,6 +129,16 @@ add_definitions(-DCLIENT)
 add_definitions(-DNOMINMAX)
 add_definitions(${FRAMEWORK_DEFINITIONS})
 add_definitions(-D"VERSION=${VERSION}")
+if (OPTIONS_DISTRIBUTION)
+  string(STRIP "${OTC_MANIFEST_PUBLIC_KEY}" OTC_MANIFEST_PUBLIC_KEY)
+  string(LENGTH "${OTC_MANIFEST_PUBLIC_KEY}" OTC_MANIFEST_PUBLIC_KEY_LENGTH)
+  if (NOT OTC_MANIFEST_PUBLIC_KEY_LENGTH EQUAL 44)
+    message(FATAL_ERROR "OPTIONS_DISTRIBUTION needs OTC_MANIFEST_PUBLIC_KEY (base64 of the 32-byte ed25519 key, see arch/deploy/launcher/manifest.py)")
+  endif()
+  message(STATUS "Distribution build: signed packages only")
+  add_definitions(-DOTC_DISTRIBUTION)
+  add_definitions(-D"OTC_MANIFEST_PUBLIC_KEY=\\\"${OTC_MANIFEST_PUBLIC_KEY}\\\"")
+endif()
 # === Build options ===
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 add_definitions(-D"BUILD_TYPE=\\\"${CMAKE_BUILD_TYPE}\\\"")
@@ -332,6 +345,7 @@ set(SOURCE_FILES
         framework/core/clock.cpp
         framework/core/config.cpp
         framework/core/configmanager.cpp
+        framework/core/distribution.cpp
         framework/core/event.cpp
         framework/core/eventdispatcher.cpp
         framework/core/filestream.cpp

@@ -22,6 +22,7 @@
 
 #include "client/client.h"
 #include "client/gameconfig.h"
+#include "framework/core/distribution.h"
 #include "framework/core/graphicalapplication.h"
 #include "framework/core/resourcemanager.h"
 #include "framework/luaengine/luainterface.h"
@@ -154,8 +155,14 @@ int main(const int argc, const char* argv[])
 
     // find script init.lua and run it
     ALOGD("main: discovering work dir...");
+#ifdef OTC_DISTRIBUTION
+    // distribution: init.lua and everything else come only from the packages signed through the launcher
+    if (!g_resources.discoverWorkDir("manifest.json") || !distribution::mountVerifiedPackages(g_resources.getWorkDir()))
+        g_logger.fatal("The client files are missing or were modified. Open the game through the launcher and use Repair.");
+#else
     if (!g_resources.discoverWorkDir("init.lua"))
         g_logger.fatal("Unable to find work directory, the application cannot be initialized.");
+#endif
     ALOGD("main: work dir found: %s", g_resources.getWorkDir().c_str());
 
     if (shouldShowHelp(args)) {
