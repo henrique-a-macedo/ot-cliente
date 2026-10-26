@@ -147,7 +147,6 @@ local NPC_TALK_RADIUS = 3
 consolePanel = nil
 consoleContentPanel = nil
 local extendedViewButtonToggleChat = nil
-local extendedViewButtonShowAlphaChat = nil
 local gameBottomPanel = nil
 -- Tibia-like: when returnDisablesChat is enabled, pressing Enter in walk (WASD) mode opens a
 -- temporary chat (marked with '*') that returns to WASD after a single message is sent.
@@ -2668,20 +2667,18 @@ function extendedViewHide(bool)
         gameBottomPanel:hide()
         setChatSplitterVisible(false)
         createButtonChat()
-        extendedViewCanSee(extendedViewButtonShowAlphaChat:isOn())
     else
         consolePanel:getChildById('extendedViewHide'):setChecked(false)
         gameBottomPanel:show(true)
         setChatSplitterVisible(true)
         extendedViewCanSee(false)
         returnChat()
-        if extendedViewButtonShowAlphaChat then
-            extendedViewButtonShowAlphaChat:setOn(false)
-        end
         destroyButtonChat()
     end
 end
 
+-- one button on the map while the chat is hidden: it brings the chat back (the transparent "messages over the map"
+-- mode and its second button were removed)
 function createButtonChat()
     if extendedViewButtonToggleChat then
         return
@@ -2714,39 +2711,12 @@ function createButtonChat()
             extendedViewHide(true)
         end
     end
-    extendedViewButtonShowAlphaChat = g_ui.createWidget(stringNameMobileOrPc, mapPanel)
-    -- a different icon: this one only shows the latest messages over the map, without the chat box
-    extendedViewButtonShowAlphaChat:setIcon("/images/topbuttons/motd")
-    extendedViewButtonShowAlphaChat:setTooltip(tr('Show the latest messages over the map (chat stays hidden)'))
-    extendedViewButtonShowAlphaChat:addAnchor(AnchorBottom, "parent", AnchorBottom)
-    if g_platform.isMobile() then
-        extendedViewButtonShowAlphaChat:setMarginBottom(hightMobileWidget)
-        extendedViewButtonShowAlphaChat:setSize("60 60")
-        extendedViewButtonShowAlphaChat:addAnchor(AnchorRight, "test", AnchorLeft)
-    else
-        extendedViewButtonShowAlphaChat:setSize("30 23")
-        extendedViewButtonShowAlphaChat:addAnchor(AnchorLeft, "test", AnchorRight)
-        extendedViewButtonShowAlphaChat:setMarginBottom(10)
-    end
-    extendedViewButtonShowAlphaChat:setMarginLeft(5)
-    extendedViewButtonShowAlphaChat.onClick = function(a, b)
-        if extendedViewButtonShowAlphaChat:isOn() then
-            extendedViewButtonShowAlphaChat:setOn(false)
-        else
-            extendedViewButtonShowAlphaChat:setOn(true)
-        end
-        extendedViewCanSee(extendedViewButtonShowAlphaChat:isOn())
-    end
 end
 
 function destroyButtonChat()
     if extendedViewButtonToggleChat and not extendedViewButtonToggleChat:isDestroyed() then
         extendedViewButtonToggleChat:destroy()
         extendedViewButtonToggleChat = nil
-    end
-    if extendedViewButtonShowAlphaChat and not extendedViewButtonShowAlphaChat:isDestroyed() then
-        extendedViewButtonShowAlphaChat:destroy()
-        extendedViewButtonShowAlphaChat = nil
     end
 end
 
