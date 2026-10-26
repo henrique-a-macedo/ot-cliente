@@ -91,10 +91,11 @@ MainWindow
     layout:
       type: verticalBox
 
+  // anchored to the window, not to `detail` (which anchors to it): a loop here closed the client
   VerticalScrollBar
     id: detailScroll
-    anchors.top: detail.top
-    anchors.bottom: detail.bottom
+    anchors.top: parent.top
+    anchors.bottom: questList.bottom
     anchors.right: parent.right
     step: 16
     pixels-scroll: true
