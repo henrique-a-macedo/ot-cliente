@@ -182,6 +182,10 @@ local FLOATING_GRIP_WIDTH = 16
 local function fitFloatingWidth()
     if floating then
         topMenu:setWidth(FLOATING_GRIP_WIDTH + topLeftButtonsPanel:getWidth() + topLeftTogglesPanel:getWidth())
+        -- a wider box must stay on screen
+        if topMenu.floatingFit then
+            topMenu.floatingFit()
+        end
     end
 end
 
@@ -195,7 +199,8 @@ local function setFloating(enabled)
         modules.game_interface.getRootPanel():addAnchor(AnchorTop, 'parent', AnchorTop)
         FloatingPanel.attach(topMenu, 'topMenu')
         fitFloatingWidth()
-        FloatingPanel.restore(topMenu, { x = topMenu:getParent():getWidth() - topMenu:getWidth() - 4, y = 4 })
+        -- first time: top centre (the right corner has the health and mana bars)
+        FloatingPanel.restore(topMenu, { x = math.floor((topMenu:getParent():getWidth() - topMenu:getWidth()) / 2), y = 4 })
         topMenu:show()
         topMenu:raise()
         connect(topLeftTogglesPanel, { onGeometryChange = fitFloatingWidth })

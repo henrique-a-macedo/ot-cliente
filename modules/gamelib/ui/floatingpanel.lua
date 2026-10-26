@@ -54,6 +54,12 @@ function FloatingPanel.attach(widget, settingsKey, menuBuilder)
     local saved = loadAll()[settingsKey]
     widget.floatingLocked = saved and saved.locked == true or false
     widget:setDraggable(true)
+    -- the box must take the mouse: a phantom widget lets clicks through and a drag never starts on it
+    widget.floatingWasPhantom = widget:isPhantom()
+    widget:setPhantom(false)
+    widget.onMousePress = function(self, mousePos, mouseButton)
+        return mouseButton == MouseLeftButton or mouseButton == MouseRightButton
+    end
 
     widget.onDragEnter = function(self, mousePos)
         if self.floatingLocked then
@@ -106,6 +112,11 @@ function FloatingPanel.detach(widget)
     widget.onDragEnter = nil
     widget.onDragMove = nil
     widget.onDragLeave = nil
+    widget.onMousePress = nil
     widget.onMouseRelease = nil
     widget:setDraggable(false)
+    if widget.floatingWasPhantom ~= nil then
+        widget:setPhantom(widget.floatingWasPhantom)
+        widget.floatingWasPhantom = nil
+    end
 end
