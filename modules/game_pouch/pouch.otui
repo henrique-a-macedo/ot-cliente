@@ -12,8 +12,9 @@ PouchEmpty < Label
   text-offset: 12 2
   color: #808080
 
+// name, what it does, amount
 PouchRow < UIWidget
-  height: 38
+  height: 50
   background-color: #ffffff0a
   margin-bottom: 2
 
@@ -35,11 +36,20 @@ PouchRow < UIWidget
     color: #dfdfdf
 
   Label
-    id: amount
+    id: description
     anchors.left: name.left
     anchors.right: name.right
     anchors.top: name.bottom
-    margin-top: 2
+    margin-top: 1
+    font: verdana-9px-rounded
+    color: #a0a0a0
+
+  Label
+    id: amount
+    anchors.left: name.left
+    anchors.right: name.right
+    anchors.top: description.bottom
+    margin-top: 1
     color: #8fd18f
 
   Button
@@ -53,7 +63,7 @@ PouchRow < UIWidget
 MainWindow
   id: pouchWindow
   !text: tr('Currency Pouch')
-  size: 330 380
+  size: 380 420
   visible: false
   @onEscape: modules.game_pouch.hide()
 

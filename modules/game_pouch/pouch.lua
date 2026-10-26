@@ -50,6 +50,7 @@ local function render(groups)
                 row.icon:setItemId(currency.clientId)
             end
             row.name:setText(currency.name)
+            row.description:setText(currency.description or '')
             row.amount:setText(tr('Amount: %d', currency.amount))
             row:setTooltip(currency.description)
             row.withdraw:setVisible(currency.withdrawable)
@@ -129,7 +130,7 @@ function init()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onMessage)
     connect(g_game, { onGameEnd = reset })
     pouchButton = modules.game_mainpanel.addToggleButton('pouchButton', tr('Currency Pouch'),
-        '/images/options/button_empty', toggle, false, 9)
+        '/images/options/button_pouch', toggle, false, 9)
 end
 
 function terminate()
