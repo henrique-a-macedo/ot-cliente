@@ -840,6 +840,31 @@ void LuaInterface::createLuaState()
         pushString("");
         setField("cpath");
         pop();
+
+        // only the standard library our modules use: an empty io (corelib/util.lua adds io.content over
+        // g_resources), os without processes, files or environment, debug with traceback and getinfo only.
+        // The tables are emptied in place, so package.loaded (require "io") hands out the same trimmed ones.
+        getGlobal("io");
+        for (const char* name : { "open", "popen", "lines", "read", "write", "close", "input", "output", "tmpfile",
+                                  "type", "stdin", "stdout", "stderr" }) {
+            pushNil();
+            setField(name);
+        }
+        pop();
+        getGlobal("os");
+        for (const char* name : { "execute", "remove", "rename", "exit", "getenv", "tmpname", "setlocale" }) {
+            pushNil();
+            setField(name);
+        }
+        pop();
+        getGlobal("debug");
+        for (const char* name : { "debug", "sethook", "gethook", "getlocal", "setlocal", "getupvalue", "setupvalue",
+                                  "upvalueid", "upvaluejoin", "getregistry", "getmetatable", "setmetatable",
+                                  "getfenv", "setfenv", "getuservalue", "setuservalue" }) {
+            pushNil();
+            setField(name);
+        }
+        pop();
     }
     pushBoolean(distribution::enabled());
     setGlobal("DISTRIBUTION_BUILD");

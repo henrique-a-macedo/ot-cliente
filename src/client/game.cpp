@@ -195,6 +195,10 @@ void Game::processGameStart()
 
 void Game::processGameEnd()
 {
+    // stops the anticheat heartbeat before anything is reset; idempotent
+    if (m_protocolGame)
+        m_protocolGame->stopAnticheat();
+
     // FPS fixed at 60 for when UI is rendering alone.
     g_app.setTargetFps(60u);
 

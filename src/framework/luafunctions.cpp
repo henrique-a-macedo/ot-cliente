@@ -59,6 +59,7 @@
 
 #ifdef FRAMEWORK_NET
 #include <framework/net/httplogin.h>
+#include <framework/net/launcherbridge.h>
 #include <framework/net/protocol.h>
 #include <framework/net/protocolhttp.h>
 #include <framework/net/server.h>
@@ -114,13 +115,16 @@ void Application::registerLuaFunctions()
 
     // Platform
     g_lua.registerSingletonClass("g_platform");
+    // distribution build: the game never starts, copies or removes programs and files
+#ifndef OTC_DISTRIBUTION
     g_lua.bindSingletonFunction("g_platform", "spawnProcess", &Platform::spawnProcess, &g_platform);
-    g_lua.bindSingletonFunction("g_platform", "getProcessId", &Platform::getProcessId, &g_platform);
-    g_lua.bindSingletonFunction("g_platform", "isProcessRunning", &Platform::isProcessRunning, &g_platform);
     g_lua.bindSingletonFunction("g_platform", "copyFile", &Platform::copyFile, &g_platform);
-    g_lua.bindSingletonFunction("g_platform", "fileExists", &Platform::fileExists, &g_platform);
     g_lua.bindSingletonFunction("g_platform", "removeFile", &Platform::removeFile, &g_platform);
     g_lua.bindSingletonFunction("g_platform", "killProcess", &Platform::killProcess, &g_platform);
+#endif
+    g_lua.bindSingletonFunction("g_platform", "getProcessId", &Platform::getProcessId, &g_platform);
+    g_lua.bindSingletonFunction("g_platform", "isProcessRunning", &Platform::isProcessRunning, &g_platform);
+    g_lua.bindSingletonFunction("g_platform", "fileExists", &Platform::fileExists, &g_platform);
     g_lua.bindSingletonFunction("g_platform", "getTempPath", &Platform::getTempPath, &g_platform);
     g_lua.bindSingletonFunction("g_platform", "openUrl", &Platform::openUrl, &g_platform);
     g_lua.bindSingletonFunction("g_platform", "getCPUName", &Platform::getCPUName, &g_platform);
@@ -209,6 +213,12 @@ void Application::registerLuaFunctions()
     g_lua.bindClassMemberFunction<LoginHttp>("httpLogin", &LoginHttp::httpLogin);
     g_lua.bindClassMemberFunction<LoginHttp>("setTicket", &LoginHttp::setTicket);
 
+    // Launcher (ticket at start, new ticket through the launcher's pipe)
+    g_lua.registerSingletonClass("g_launcher");
+    g_lua.bindSingletonFunction("g_launcher", "takeTicket", &LauncherBridge::takeTicket, &g_launcher);
+    g_lua.bindSingletonFunction("g_launcher", "canRequestTicket", &LauncherBridge::canRequestTicket, &g_launcher);
+    g_lua.bindSingletonFunction("g_launcher", "requestTicket", &LauncherBridge::requestTicket, &g_launcher);
+
     // Http
     g_lua.registerSingletonClass("g_http");
     g_lua.bindSingletonFunction("g_http", "setUserAgent", &Http::setUserAgent, &g_http);
@@ -266,7 +276,6 @@ void Application::registerLuaFunctions()
     g_lua.bindSingletonFunction("g_resources", "listDirectoryFiles", &ResourceManager::listDirectoryFiles, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "getDirectoryFiles", &ResourceManager::getDirectoryFiles, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "readFileContents", &ResourceManager::readFileContents, &g_resources);
-    g_lua.bindSingletonFunction("g_resources", "readFileContentsFromWorkDir", &ResourceManager::readFileContentsFromWorkDir, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "writeFileContents", &ResourceManager::writeFileContents, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "guessFilePath", &ResourceManager::guessFilePath, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "isFileType", &ResourceManager::isFileType, &g_resources);
@@ -277,6 +286,11 @@ void Application::registerLuaFunctions()
     g_lua.bindSingletonFunction("g_resources", "resolvePath", &ResourceManager::resolvePath, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "fileChecksum", &ResourceManager::fileChecksum, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "fileSha256", &ResourceManager::fileSha256, &g_resources);
+    g_lua.bindSingletonFunction("g_resources", "filesChecksums", &ResourceManager::filesChecksums, &g_resources);
+    g_lua.bindSingletonFunction("g_resources", "selfChecksum", &ResourceManager::selfChecksum, &g_resources);
+    // distribution build: updates come only from the launcher, and nothing writes next to the executable
+#ifndef OTC_DISTRIBUTION
+    g_lua.bindSingletonFunction("g_resources", "readFileContentsFromWorkDir", &ResourceManager::readFileContentsFromWorkDir, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "fileSha256InWorkDir", &ResourceManager::fileSha256InWorkDir, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "writeDownloadedFile", &ResourceManager::writeDownloadedFile, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "writeDownloadedFileToWorkDir", &ResourceManager::writeDownloadedFileToWorkDir, &g_resources);
@@ -284,10 +298,9 @@ void Application::registerLuaFunctions()
     g_lua.bindSingletonFunction("g_resources", "extractDownloadedArchiveToWorkDir", &ResourceManager::extractDownloadedArchiveToWorkDir, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "extractDownloadedZip", &ResourceManager::extractDownloadedZip, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "writeFileContentsToWorkDir", &ResourceManager::writeFileContentsToWorkDir, &g_resources);
-    g_lua.bindSingletonFunction("g_resources", "filesChecksums", &ResourceManager::filesChecksums, &g_resources);
-    g_lua.bindSingletonFunction("g_resources", "selfChecksum", &ResourceManager::selfChecksum, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "updateFiles", &ResourceManager::updateFiles, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "updateExecutable", &ResourceManager::updateExecutable, &g_resources);
+#endif
     g_lua.bindSingletonFunction("g_resources", "createArchive", &ResourceManager::createArchive, &g_resources);
     g_lua.bindSingletonFunction("g_resources", "decompressArchive", &ResourceManager::decompressArchive, &g_resources);
 

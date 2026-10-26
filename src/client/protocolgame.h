@@ -23,6 +23,7 @@
 #pragma once
 
 #include "declarations.h"
+#include "framework/core/declarations.h"
 #include "framework/net/protocol.h"
 #include "staticdata.h"
 
@@ -32,6 +33,12 @@ public:
     void login(std::string_view accountName, std::string_view accountPassword, std::string_view host, uint16_t port, std::string_view characterName, std::string_view authenticatorToken, std::string_view sessionKey);
 
     void sendExtendedOpcode(uint8_t opcode, const std::string& buffer);
+    // anticheat heartbeat: server sends "cfg;<seconds>", client answers "hb;<seq>;<findings>;<mac>"
+    // (forgottenserver data/scripts/creaturescripts/player/anticheat.lua; contratos-cross-repo.md)
+    static constexpr uint8_t ANTICHEAT_OPCODE = 125;
+    void sendAnticheatHeartbeat(const std::string& findings);
+    const std::string& getSessionKey() const { return m_sessionKey; }
+    bool isAnticheatRunning() const { return m_anticheatInterval > 0; }
     void sendLoginPacket(uint32_t challengeTimestamp, uint8_t challengeRandom);
     void sendEnterGame();
     void sendLogout();
@@ -337,6 +344,12 @@ private:
     void parsePlayerInventory(const InputMessagePtr& msg);
     void parseModalDialog(const InputMessagePtr& msg);
     void parseExtendedOpcode(const InputMessagePtr& msg);
+    // anticheat: cfg;<intervalo> chega via extended opcode; hb;... é enviado por nós
+    void startAnticheat(uint32_t intervalSeconds);
+    void stopAnticheat();
+    void scheduleAnticheatBeat();
+    void dispatchAnticheatScan();
+    std::string computeAnticheatMac(uint32_t seq, const std::string& findings) const;
     void parseChangeMapAwareRange(const InputMessagePtr& msg);
 
     /**
@@ -476,6 +489,12 @@ private:
     bool m_mapKnown{ false };
     bool m_firstRecv{ true };
     bool m_record{ false };
+
+    // anticheat heartbeat (extended opcode 125)
+    uint32_t m_anticheatInterval{ 0 };
+    uint32_t m_anticheatSeq{ 0 };
+    uint32_t m_anticheatGeneration{ 0 };
+    ScheduledEventPtr m_anticheatBeatEvent;
 
     ticks_t m_lastPartyAnalyzerCall{ 0 };
     int m_recivedPackeds = 0;

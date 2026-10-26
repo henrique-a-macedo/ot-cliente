@@ -71,11 +71,18 @@ namespace
         DistMount{ "modules.otpkg", "/modules" },
     };
 
+    // loaded by src/anticheat/anticheat.cpp; must be in the signed manifest and match it
+    constexpr const char* DIST_ANTICHEAT_DLL = "otclient_ac.dll";
+
     // what may come from the user write dir (settings, minimap cache, logs); never code, shaders or assets
     constexpr std::array<std::string_view, 5> DIST_WRITE_DIR_EXTENSIONS{ ".otml", ".otmm", ".json", ".txt", ".log" };
 
     // the mount names (PHYSFS_getRealDir) of the verified packages
     std::set<std::string> g_distTrusted;
+
+    // set by mountVerifiedPackages: the work dir and what the signed manifest expects of each top-level file
+    std::filesystem::path g_distWorkDir;
+    std::map<std::string, std::pair<uint64_t, std::string>> g_distExpected;
 
     // A package opened without write/delete sharing for the whole session: once hashed, nobody can swap it.
     struct DistLockedFile
@@ -270,7 +277,7 @@ bool distribution::mountVerifiedPackages(const std::string& workDir)
         return false;
     }
 
-    // package name -> expected (size, sha256), only for the top-level *.otpkg entries of the signed manifest
+    // file name -> expected (size, sha256), only for the top-level entries of the signed manifest
     std::map<std::string, std::pair<uint64_t, std::string>> expected;
     try {
         const auto manifest = nlohmann::json::parse(manifestText);
@@ -280,7 +287,7 @@ bool distribution::mountVerifiedPackages(const std::string& workDir)
         }
         for (const auto& entry : manifest.at("arquivos")) {
             const auto path = entry.at("caminho").get<std::string>();
-            if (path.ends_with(".otpkg") && path.find('/') == std::string::npos)
+            if (path.find('/') == std::string::npos)
                 expected[path] = { entry.at("tamanho").get<uint64_t>(), entry.at("sha256").get<std::string>() };
         }
     } catch (const std::exception& e) {
@@ -322,6 +329,12 @@ bool distribution::mountVerifiedPackages(const std::string& workDir)
         }
         g_distTrusted.insert(name);
     }
+    g_distWorkDir = dir;
+    g_distExpected = std::move(expected);
+
+    // the anti-cheat library is part of the client: without it, or with another one, the client does not start
+    if (lockVerifiedFile(DIST_ANTICHEAT_DLL).empty())
+        return false;
 
     if (!canRead("/init.lua") || !PHYSFS_exists("init.lua")) {
         g_logger.error("distribution: init.lua is not in the packages");
@@ -346,10 +359,33 @@ bool distribution::canRead(const std::string& virtualPath)
     return std::ranges::find(DIST_WRITE_DIR_EXTENSIONS, extension) != DIST_WRITE_DIR_EXTENSIONS.end();
 }
 
+std::string distribution::lockVerifiedFile(const std::string& name)
+{
+    const auto it = g_distExpected.find(name);
+    if (it == g_distExpected.end()) {
+        g_logger.error("distribution: {} is not in the manifest", name);
+        return {};
+    }
+    const auto path = g_distWorkDir / name;
+    // stays open (FILE_SHARE_READ only) until the process exits, so the file checked is the file loaded
+    const auto file = distOpenLocked(path);
+    if (!file) {
+        g_logger.error("distribution: unable to open {}", name);
+        return {};
+    }
+    if (file->size != it->second.first || distSha256(*file) != it->second.second) {
+        g_logger.error("distribution: {} does not match the manifest", name);
+        return {};
+    }
+    return path.string();
+}
+
 #else
 
 bool distribution::mountVerifiedPackages(const std::string&) { return false; }
 
 bool distribution::canRead(const std::string&) { return true; }
+
+std::string distribution::lockVerifiedFile(const std::string& name) { return name; }
 
 #endif

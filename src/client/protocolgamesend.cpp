@@ -47,6 +47,24 @@ void ProtocolGame::sendExtendedOpcode(const uint8_t opcode, const std::string& b
     }
 }
 
+void ProtocolGame::sendAnticheatHeartbeat(const std::string& findings)
+{
+    if (m_anticheatInterval == 0)
+        return;
+
+    if (!m_enableSendExtendedOpcode) {
+        // Servidor ainda não habilitou extended opcodes (opcode 0); não dá para enviar.
+        g_logger.debug("[anticheat] heartbeat skipped: extended opcodes not enabled yet");
+        return;
+    }
+
+    ++m_anticheatSeq;
+    const std::string mac = computeAnticheatMac(m_anticheatSeq, findings);
+    const std::string payload =
+        "hb;" + std::to_string(m_anticheatSeq) + ";" + findings + ";" + mac;
+    sendExtendedOpcode(ANTICHEAT_OPCODE, payload);
+}
+
 void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint8_t challengeRandom)
 {
     const auto& msg = std::make_shared<OutputMessage>();

@@ -21,7 +21,7 @@ local authErrorBox
 local hasAttemptedAuthenticator = false
 -- one-use ticket from the launcher (it logs in and opens the client with OTC_LAUNCH_TICKET); traded for the session
 -- by the first login (contratos-cross-repo.md, section 9)
-local launchTicket = os.getenv('OTC_LAUNCH_TICKET')
+local launchTicket = g_launcher.takeTicket()
 if launchTicket == '' then
     launchTicket = nil
 end
@@ -39,6 +39,48 @@ local function showLauncherNotice()
             g_app.exit()
         end
     })
+end
+
+-- back on the login screen (logout, connection lost): the launcher trades its session for a new ticket, so the
+-- password is not asked again. A renewed ticket whose login fails waits RENEW_INTERVAL seconds before the next try
+-- (it ends in the notice instead of a loop); a login that works clears the wait (onCharacterList)
+local RENEW_INTERVAL = 15
+local lastRenewal = -RENEW_INTERVAL
+local renewing = false
+local function renewFromLauncher()
+    if renewing then
+        return
+    end
+    if not g_launcher.canRequestTicket() or g_clock.seconds() - lastRenewal < RENEW_INTERVAL then
+        showLauncherNotice()
+        return
+    end
+    lastRenewal = g_clock.seconds()
+    renewing = true
+    loadBox = displayCancelBox(tr('Please wait'), tr('Logging in through the launcher...'))
+    loadBox.onCancel = function()
+        renewing = false
+        loadBox = nil
+        g_app.exit()
+    end
+    g_launcher.requestTicket(function(ticket, err)
+        if not renewing then -- the player cancelled while we waited
+            return
+        end
+        renewing = false
+        if loadBox then
+            loadBox:destroy()
+            loadBox = nil
+        end
+        if ticket == '' then
+            g_logger.warning('[launcher] no new ticket: ' .. err)
+            showLauncherNotice()
+            return
+        end
+        launchTicket = ticket
+        EnterGame.show()
+        addEvent(EnterGame.doLogin)
+    end)
 end
 
 -- private functions
@@ -87,6 +129,9 @@ local function onSessionKey(protocol, sessionKey)
 end
 
 local function onCharacterList(protocol, characters, account, otui)
+    -- the login worked: the next trip back to the login screen may ask the launcher again right away
+    lastRenewal = -RENEW_INTERVAL
+
     local httpLogin = enterGame:getChildById('httpLoginBox'):isChecked()
 
     -- Try add server to the server list
@@ -569,7 +614,7 @@ function EnterGame.show()
     end
 
     if DISTRIBUTION_BUILD and not launchTicket then
-        showLauncherNotice()
+        renewFromLauncher()
         return
     end
 
