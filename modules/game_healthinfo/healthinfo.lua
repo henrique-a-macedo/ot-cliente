@@ -28,6 +28,10 @@ function healthManaController:onTerminate()
 end
 
 function healthManaController:onGameStart()
+    -- after the extended view has laid out its columns
+    addEvent(function()
+        modules.game_interface.restoreExtendedPlace(healthManaController.ui)
+    end)
     healthManaController:registerEvents(LocalPlayer, {
         onHealthChange = healthManaEvent,
         onManaChange = healthManaEvent
@@ -40,6 +44,11 @@ function extendedView(extendedView)
             iconTopMenu = modules.client_topmenu.addTopRightToggleButton('healthMana', tr('Show health'),
                 '/images/topbuttons/healthinfo', toggle)
             iconTopMenu:setOn(healthManaController.ui:isVisible())
+        end
+        -- the column it was dragged to is kept per character (game_interface)
+        modules.game_interface.trackExtendedPlace(healthManaController.ui)
+        if g_game.isOnline() then
+            modules.game_interface.restoreExtendedPlace(healthManaController.ui)
         end
     else
         if iconTopMenu then

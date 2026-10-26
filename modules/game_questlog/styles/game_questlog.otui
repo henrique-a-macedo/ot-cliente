@@ -119,6 +119,8 @@ QuestLogLabel < UIWidget
 QuestLogTracker < MiniWindow
   id: QuestLogTracker
   !text: tr('Quest Tracker')
+  // place, size, minimized and closed saved per character (UIMiniWindow settings)
+  &save: true
   icon: /images/topbuttons/icon-questtracker-widget
   icon-offset: 4 2
   icon-size: 12 12

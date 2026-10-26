@@ -189,23 +189,108 @@ local function fitFloatingWidth()
     end
 end
 
+-- the player hides the icons they do not use from the right click menu of the floating box, and the windows they
+-- close with the icons (inventory, health, minimap) stay closed on the next login; both saved per character
+-- ('TopMenuHiddenIcons' / 'TopMenuClosedWindows' nodes, keyed by character name). Options and exit always stay.
+local HIDDEN_ICONS_NODE = 'TopMenuHiddenIcons'
+local CLOSED_WINDOWS_NODE = 'TopMenuClosedWindows'
+local ALWAYS_SHOWN_ICONS = { optionsButton = true, logoutButton = true }
+
+local function loadCharacterFlags(node)
+    local all = g_settings.getNode(node) or {}
+    return all[g_game.getCharacterName()] or {}
+end
+
+local function setCharacterFlag(node, id, flag)
+    local all = g_settings.getNode(node) or {}
+    local name = g_game.getCharacterName()
+    all[name] = all[name] or {}
+    all[name][id] = flag or nil
+    g_settings.setNode(node, all)
+end
+
+local function loadHiddenIcons()
+    return loadCharacterFlags(HIDDEN_ICONS_NODE)
+end
+
+local function setIconHidden(id, hidden)
+    setCharacterFlag(HIDDEN_ICONS_NODE, id, hidden)
+end
+
+local function rememberWindowState(button)
+    if g_game.isOnline() and not ALWAYS_SHOWN_ICONS[button:getId()] then
+        setCharacterFlag(CLOSED_WINDOWS_NODE, button:getId(), not button:isOn())
+    end
+end
+
+-- on login: opens or closes each icon's window as this character left it (open unless saved closed)
+local function restoreWindowStates()
+    local closed = loadCharacterFlags(CLOSED_WINDOWS_NODE)
+    for _, button in ipairs(topLeftTogglesPanel:getChildren()) do
+        local id = button:getId()
+        if not ALWAYS_SHOWN_ICONS[id] and button.topMenuCallback and button:isOn() == (closed[id] == true) then
+            button.topMenuCallback()
+        end
+    end
+end
+
+-- the login bar shows every icon; the floating box leaves out the hidden ones
+local function applyIconVisibility(button)
+    local hidden = floating and not ALWAYS_SHOWN_ICONS[button:getId()] and loadHiddenIcons()[button:getId()] == true
+    button:setVisible(not hidden)
+end
+
+local function applyAllIconsVisibility()
+    for _, panel in ipairs({ topLeftButtonsPanel, topLeftTogglesPanel }) do
+        for _, button in ipairs(panel:getChildren()) do
+            applyIconVisibility(button)
+        end
+    end
+end
+
+local function iconsMenu(menu)
+    menu:addSeparator()
+    for _, panel in ipairs({ topLeftButtonsPanel, topLeftTogglesPanel }) do
+        for _, button in ipairs(panel:getChildren()) do
+            local id = button:getId()
+            if not ALWAYS_SHOWN_ICONS[id] then
+                local label = button:getTooltip()
+                if not label or label == '' then
+                    label = id
+                end
+                menu:addCheckBox(label, button:isExplicitlyVisible(), function(_, checked)
+                    setIconHidden(id, not checked)
+                    applyIconVisibility(button)
+                end)
+            end
+        end
+    end
+end
+
 local function setFloating(enabled)
     if enabled == floating then
         return
     end
     floating = enabled
     topMenu.floatingGrip:setVisible(enabled)
+    applyAllIconsVisibility()
     if enabled then
         modules.game_interface.getRootPanel():addAnchor(AnchorTop, 'parent', AnchorTop)
-        FloatingPanel.attach(topMenu, 'topMenu')
+        FloatingPanel.attach(topMenu, 'topMenu', iconsMenu)
         fitFloatingWidth()
         -- first time: top centre (the right corner has the health and mana bars)
         FloatingPanel.restore(topMenu, { x = math.floor((topMenu:getParent():getWidth() - topMenu:getWidth()) / 2), y = 4 })
         topMenu:show()
         topMenu:raise()
+        -- other modules (game_mainpanel, battle, viplist, spelllist) create and show their buttons here on their
+        -- own schedule, after login: any change in the panels re-hides the hidden icons (a no-op once they are)
+        connect(topLeftTogglesPanel, { onGeometryChange = applyAllIconsVisibility })
+        connect(topLeftButtonsPanel, { onGeometryChange = applyAllIconsVisibility })
         connect(topLeftTogglesPanel, { onGeometryChange = fitFloatingWidth })
         connect(topLeftButtonsPanel, { onGeometryChange = fitFloatingWidth })
     else
+        disconnect(topLeftTogglesPanel, { onGeometryChange = applyAllIconsVisibility })
+        disconnect(topLeftButtonsPanel, { onGeometryChange = applyAllIconsVisibility })
         disconnect(topLeftTogglesPanel, { onGeometryChange = fitFloatingWidth })
         disconnect(topLeftButtonsPanel, { onGeometryChange = fitFloatingWidth })
         FloatingPanel.detach(topMenu)
@@ -239,6 +324,7 @@ function online()
     addEvent(function()
         if modules.game_interface.currentViewMode == 2 and g_game.isOnline() then
             setFloating(true)
+            restoreWindowStates()
         end
         if modules.game_interface.currentViewMode ~= 2 and g_game.isOnline() then
             hide()
@@ -499,11 +585,21 @@ function addRightGameToggleButton(id, description, icon, callback, front, index)
 end
 
 function addTopRightRegularButton(id, description, icon, callback, front)
-    return addButton(id, description, icon, callback, topLeftButtonsPanel, false, front)
+    local button = addButton(id, description, icon, callback, topLeftButtonsPanel, false, front)
+    applyIconVisibility(button)
+    return button
 end
 
 function addTopRightToggleButton(id, description, icon, callback, front)
-    return addButton(id, description, icon, callback, topLeftTogglesPanel, true, front)
+    local button
+    button = addButton(id, description, icon, function()
+        callback()
+        rememberWindowState(button)
+    end, topLeftTogglesPanel, true, front)
+    -- the module's own toggle, without saving: restoreWindowStates replays it on login
+    button.topMenuCallback = callback
+    applyIconVisibility(button)
+    return button
 end
 
 function showGameButtons()

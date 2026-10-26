@@ -204,6 +204,19 @@ function consoleController:onInit()
         onChannelEvent = onChannelEvent
     })
     gameBottomPanel = modules.game_interface.getBottomPanel()
+    -- extended view: dragging the chat undocks it (UIWindow breaks its anchors) and the splitter that sets its height
+    -- stays anchored between the columns, a bare bar over the map; it goes away with the docked chat (the floating
+    -- chat resizes by its own bottom border)
+    gameBottomPanel.onDragEnter = function(self, mousePos)
+        if modules.game_interface.currentViewMode == 2 then
+            self.chatUndocked = true
+            local splitter = modules.game_interface.getBottomSplitter()
+            if splitter then
+                splitter:setVisible(false)
+            end
+        end
+        return UIWindow.onDragEnter(self, mousePos)
+    end
     consolePanel = g_ui.loadUI('console', gameBottomPanel)
     consoleTextEdit = consolePanel:getChildById('consoleTextEdit')
     consoleContentPanel = consolePanel:getChildById('consoleContentPanel')
@@ -643,6 +656,7 @@ function consoleController:onTerminate()
     consoleToggleChat = nil
     consoleTextEdit = nil
     ownPrivateName = nil
+    gameBottomPanel.onDragEnter = nil
     gameBottomPanel = nil
     Console = nil
 end
@@ -2572,6 +2586,8 @@ function setExtendedView(bool)
         consolePanel:setMarginBottom(0)
         consolePanel:getChildById('extendedViewDraggable'):hide()
         consolePanel:getChildById('extendedViewHide'):hide()
+        -- the normal view docks the chat again (applyExtendedViewLayout)
+        gameBottomPanel.chatUndocked = nil
         gameBottomPanel:show(true)
         destroyButtonChat()
     end
@@ -2647,7 +2663,7 @@ end
 local function setChatSplitterVisible(visible)
     local splitter = modules.game_interface.getBottomSplitter()
     if splitter then
-        splitter:setVisible(visible)
+        splitter:setVisible(visible and not gameBottomPanel.chatUndocked)
     end
 end
 
