@@ -205,6 +205,7 @@ private:
     static Size getBestTextureDimension(int w, int h, int count);
 
     void loadTexture(int animationPhase);
+    bool spriteSheetsLoaded() const;
 
     struct TextureData
     {

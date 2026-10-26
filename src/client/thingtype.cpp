@@ -29,6 +29,8 @@
 #include "spriteappearances.h"
 #include "spritemanager.h"
 #include "framework/core/asyncdispatcher.h"
+#include "framework/core/clock.h"
+#include "framework/core/eventdispatcher.h"
 #include "framework/core/filestream.h"
 #include "framework/graphics/drawpoolmanager.h"
 #include "framework/graphics/image.h"
@@ -832,8 +834,37 @@ const TexturePtr& ThingType::getTexture(const int animationPhase)
     bool expected = false;
     if (m_loading.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
         bool async = g_app.isLoadingAsyncTexture();
-        if (g_game.isUsingProtobuf() && g_drawPool.getCurrentType() == DrawPoolType::FOREGROUND)
-            async = false;
+        // An async load draws nothing until it finishes: a one-frame flicker. Only the first LZMA decode of a sheet
+        // is slow; with every sheet already decoded the texture is built right here. That covers a thing unloaded
+        // after GarbageCollection::thingType's idle time (snow footprints) and the walking frames of an outfit whose
+        // standing frame the outfit window already loaded.
+        // The UI loads right here too (it is not redrawn every frame, so an async texture would stay blank, and the
+        // async pool is the one the frame waits on), but at most one sheet decode per UI_DECODE_INTERVAL_MS: a list
+        // showing many new things at once (scrolling the outfit window) decoded them all in one frame and stalled.
+        // The others wait for the next frames, asked for with a repaint.
+        if (g_game.isUsingProtobuf()) {
+            if (spriteSheetsLoaded()) {
+                async = false;
+            } else if (g_drawPool.getCurrentType() == DrawPoolType::FOREGROUND) {
+                static constexpr ticks_t UI_DECODE_INTERVAL_MS = 16;
+                static std::atomic<ticks_t> lastUiDecode{ 0 };
+                static std::atomic_bool repaintPending{ false };
+
+                const ticks_t now = g_clock.millis();
+                ticks_t last = lastUiDecode.load(std::memory_order_acquire);
+                if (now - last < UI_DECODE_INTERVAL_MS || !lastUiDecode.compare_exchange_strong(last, now, std::memory_order_acq_rel)) {
+                    m_loading.store(false, std::memory_order_release);
+                    if (!repaintPending.exchange(true, std::memory_order_acq_rel)) {
+                        g_mainDispatcher.scheduleEvent([] {
+                            repaintPending.store(false, std::memory_order_release);
+                            g_drawPool.repaint(DrawPoolType::FOREGROUND);
+                        }, UI_DECODE_INTERVAL_MS);
+                    }
+                    return m_textureNull;
+                }
+                async = false;
+            }
+        }
 
         if (!async) {
             loadTexture(animationPhase);
@@ -851,6 +882,26 @@ const TexturePtr& ThingType::getTexture(const int animationPhase)
     }
 
     return m_textureNull;
+}
+
+// every sprite sheet this thing uses is decoded in memory (sheets are kept once loaded)
+bool ThingType::spriteSheetsLoaded() const
+{
+    SpriteSheetPtr lastSheet;
+    for (const auto spriteId : m_spritesIndex) {
+        if (spriteId == 0 || (lastSheet && static_cast<int>(spriteId) >= lastSheet->firstId && static_cast<int>(spriteId) <= lastSheet->lastId))
+            continue;
+
+        const auto& sheet = g_spriteAppearances.getSheetBySpriteId(spriteId, false);
+        if (!sheet)
+            continue; // a missing sprite is reported by loadTexture
+
+        if (sheet->m_loadingState.load(std::memory_order_acquire) != SpriteLoadState::LOADED)
+            return false;
+
+        lastSheet = sheet;
+    }
+    return true;
 }
 
 void ThingType::loadTexture(const int animationPhase)
@@ -1072,8 +1123,13 @@ int ThingType::getExactHeight()
     if (m_exactHeight != 0)
         return m_exactHeight;
 
-    getTexture(0);
+    // still loading (async): no size yet, and nothing cached so the next call measures it
+    if (!getTexture(0))
+        return 0;
+
     const int frameIndex = getTextureIndex(0, 0, 0, 0);
+    if (frameIndex >= static_cast<int>(m_textureData[0].pos.size()))
+        return 0;
 
     const auto& textureDataPos = m_textureData[0].pos[frameIndex];
     const Size& size = textureDataPos.originRects.size() - textureDataPos.offsets.toSize();
