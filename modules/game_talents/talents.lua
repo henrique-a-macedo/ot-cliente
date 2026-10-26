@@ -49,18 +49,30 @@ local function place(widget, rect)
     end
 end
 
--- an L-shaped line from the bottom of `from` to the top of `to`: down, across, down
+-- a line from `from` to the top of `to`. Next row: an L from the bottom (down, across, down). Further down (the
+-- cross nodes sit between two columns): out of the side of `from`, then straight down the gap between the columns,
+-- so it never runs behind the nodes in between and looks like it starts at them
 local function link(from, to, color)
     local canvas = talentsWindow.canvas
     local a, b = nodeRect(from), nodeRect(to)
-    local ax, ay = a.x + 46, a.y + 46
-    local bx, by = b.x + 46, b.y
-    local midY = math.floor((ay + by) / 2)
-    local pieces = {
-        { x = ax, y = ay, width = LINK_WIDTH, height = midY - ay },
-        { x = math.min(ax, bx), y = midY, width = math.abs(bx - ax) + LINK_WIDTH, height = LINK_WIDTH },
-        { x = bx, y = midY, width = LINK_WIDTH, height = by - midY }
-    }
+    local ax, bx, by = a.x + 46, b.x + 46, b.y
+    local pieces
+    if to.y - from.y > 1 and math.abs(bx - ax) > 46 then
+        local sideY = a.y + 22
+        local edge = bx > ax and a.x + 92 or a.x
+        pieces = {
+            { x = math.min(edge, bx), y = sideY, width = math.abs(bx - edge) + LINK_WIDTH, height = LINK_WIDTH },
+            { x = bx, y = sideY, width = LINK_WIDTH, height = by - sideY }
+        }
+    else
+        local ay = a.y + 46
+        local midY = math.floor((ay + by) / 2)
+        pieces = {
+            { x = ax, y = ay, width = LINK_WIDTH, height = midY - ay },
+            { x = math.min(ax, bx), y = midY, width = math.abs(bx - ax) + LINK_WIDTH, height = LINK_WIDTH },
+            { x = bx, y = midY, width = LINK_WIDTH, height = by - midY }
+        }
+    end
     for _, rect in ipairs(pieces) do
         if rect.width > 0 and rect.height > 0 then
             local piece = g_ui.createWidget('TalentLink', canvas)

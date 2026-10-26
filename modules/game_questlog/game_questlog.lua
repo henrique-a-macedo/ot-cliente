@@ -648,42 +648,16 @@ local function showQuestTracker()
         iconWidget:setImageSource('/images/topbuttons/icon-questtracker-widget')
     end
     
-    -- Position contextMenuButton where toggleFilterButton was (to the left of minimize button)
+    -- the menu and new-window buttons show here; UIMiniWindow:layoutHeaderButtons places them
     local contextMenuButton = trackerMiniWindow:recursiveGetChildById('contextMenuButton')
-    local minimizeButton = trackerMiniWindow:recursiveGetChildById('minimizeButton')
-    
-    if contextMenuButton and minimizeButton then
+    if contextMenuButton then
         contextMenuButton:setVisible(true)
-        contextMenuButton:breakAnchors()
-        contextMenuButton:addAnchor(AnchorTop, minimizeButton:getId(), AnchorTop)
-        contextMenuButton:addAnchor(AnchorRight, minimizeButton:getId(), AnchorLeft)
-        contextMenuButton:setMarginRight(7)  -- Same margin as toggleFilterButton had
-        contextMenuButton:setMarginTop(0)
-        contextMenuButton:setSize({width = 12, height = 12})
     end
-    
-    -- Position newWindowButton to the left of contextMenuButton
     local newWindowButton = trackerMiniWindow:recursiveGetChildById('newWindowButton')
-    
-    if newWindowButton and contextMenuButton then
+    if newWindowButton then
         newWindowButton:setVisible(true)
-        newWindowButton:breakAnchors()
-        newWindowButton:addAnchor(AnchorTop, contextMenuButton:getId(), AnchorTop)
-        newWindowButton:addAnchor(AnchorRight, contextMenuButton:getId(), AnchorLeft)
-        newWindowButton:setMarginRight(2)  -- Same margin as other buttons
-        newWindowButton:setMarginTop(0)
     end
-    
-    -- Position lockButton to the left of newWindowButton
-    local lockButton = trackerMiniWindow:recursiveGetChildById('lockButton')
-    
-    if lockButton and newWindowButton then
-        lockButton:breakAnchors()
-        lockButton:addAnchor(AnchorTop, newWindowButton:getId(), AnchorTop)
-        lockButton:addAnchor(AnchorRight, newWindowButton:getId(), AnchorLeft)
-        lockButton:setMarginRight(2)  -- Same margin as other buttons
-        lockButton:setMarginTop(0)
-    end
+    trackerMiniWindow:layoutHeaderButtons()
 
     -- Set up contextMenuButton click handler (moved from menuButton)
     if contextMenuButton then

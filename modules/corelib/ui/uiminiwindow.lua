@@ -118,6 +118,85 @@ function UIMiniWindow:setup()
             self:minimize()
         end
     end
+
+    -- each module hides a different set of header buttons; re-chain the visible ones whenever one shows or hides
+    local relayout = function()
+        self:layoutHeaderButtons()
+    end
+    for _, id in ipairs(UIMiniWindow.HEADER_BUTTONS) do
+        local button = self:recursiveGetChildById(id)
+        if button then
+            connect(button, { onVisibilityChange = relayout })
+        end
+    end
+
+    -- the title never runs under the buttons: it is cut with '...' to the room it has, keeping the full text
+    local title = self:getChildById('miniwindowTitle')
+    if title then
+        title.fullTitle = title:getText()
+        connect(title, {
+            onTextChange = function(widget, text)
+                if not widget.elidingTitle then
+                    widget.fullTitle = text
+                    self:fitTitle()
+                end
+            end,
+            onGeometryChange = function()
+                self:fitTitle()
+            end
+        })
+    end
+    self:layoutHeaderButtons()
+end
+
+function UIMiniWindow:fitTitle()
+    local title = self:getChildById('miniwindowTitle')
+    if not title or not title.fullTitle then
+        return
+    end
+    local full = title.fullTitle
+    local room = title:getWidth() - title:getPaddingLeft() - title:getPaddingRight()
+    title.elidingTitle = true
+    title:setText(full)
+    if room > 0 and title:getTextSize().width > room then
+        for length = #full - 1, 1, -1 do
+            title:setText(full:sub(1, length):gsub('%s+$', '') .. '...')
+            if title:getTextSize().width <= room then
+                break
+            end
+        end
+    end
+    title.elidingTitle = false
+end
+
+-- header buttons left of minimize, right to left; the gap after minimize is a little wider than between the others
+UIMiniWindow.HEADER_BUTTONS = { 'upButton', 'toggleFilterButton', 'contextMenuButton', 'newWindowButton', 'lockButton' }
+local HEADER_FIRST_GAP = 4
+local HEADER_GAP = 2
+
+function UIMiniWindow:layoutHeaderButtons()
+    local minimizeButton = self:getChildById('minimizeButton')
+    if not minimizeButton then
+        return
+    end
+    local previous = minimizeButton
+    for _, id in ipairs(UIMiniWindow.HEADER_BUTTONS) do
+        local button = self:recursiveGetChildById(id)
+        if button and button:isExplicitlyVisible() then
+            button:breakAnchors()
+            button:addAnchor(AnchorTop, previous:getId(), AnchorTop)
+            button:addAnchor(AnchorRight, previous:getId(), AnchorLeft)
+            button:setMarginRight(previous == minimizeButton and HEADER_FIRST_GAP or HEADER_GAP)
+            button:setMarginTop(0)
+            previous = button
+        end
+    end
+    local title = self:getChildById('miniwindowTitle')
+    if title then
+        title:addAnchor(AnchorRight, previous:getId(), AnchorLeft)
+        title:setMarginRight(4)
+        self:fitTitle()
+    end
 end
 
 function UIMiniWindow:setupOnStart()

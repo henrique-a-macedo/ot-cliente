@@ -209,6 +209,11 @@ local function setFloating(enabled)
         disconnect(topLeftTogglesPanel, { onGeometryChange = fitFloatingWidth })
         disconnect(topLeftButtonsPanel, { onGeometryChange = fitFloatingWidth })
         FloatingPanel.detach(topMenu)
+        -- back to the login bar: the floating box broke its anchors and shrank it
+        topMenu:breakAnchors()
+        topMenu:addAnchor(AnchorTop, 'parent', AnchorTop)
+        topMenu:addAnchor(AnchorHorizontalCenter, 'parent', AnchorHorizontalCenter)
+        topMenu:setWidth(1020)
     end
 end
 

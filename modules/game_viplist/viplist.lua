@@ -57,25 +57,13 @@ function controllerVip:onInit()
         toggleFilterButton:setOn(false)
     end
     
+    -- positions come from UIMiniWindow:layoutHeaderButtons
     local contextMenuButton = vipWindow:recursiveGetChildById('contextMenuButton')
-    local minimizeButton = vipWindow:recursiveGetChildById('minimizeButton')
-    if contextMenuButton and minimizeButton then
-        contextMenuButton:addAnchor(AnchorTop, minimizeButton:getId(), AnchorTop)
-        contextMenuButton:addAnchor(AnchorRight, minimizeButton:getId(), AnchorLeft)
-        contextMenuButton:setMarginRight(7)
-        
+    if contextMenuButton then
         -- Add onClick handler for context menu
         contextMenuButton.onClick = function(widget, mousePos, mouseButton)
             return onVipListMousePress(widget, mousePos or widget:getPosition(), MouseRightButton)
         end
-    end
-    
-    -- Adjust lockButton anchors to be at the left of contextMenuButton
-    local lockButton = vipWindow:recursiveGetChildById('lockButton')
-    if lockButton and contextMenuButton then
-        lockButton:addAnchor(AnchorTop, contextMenuButton:getId(), AnchorTop)
-        lockButton:addAnchor(AnchorRight, contextMenuButton:getId(), AnchorLeft)
-        lockButton:setMarginRight(2)
     end
     
     -- Hide newWindowButton

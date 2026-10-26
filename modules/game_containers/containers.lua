@@ -761,28 +761,10 @@ function refreshContainerItems(container)
     end
 end
 
--- header buttons, right to left: close, minimize, then up (only for a container inside another), sort menu and
--- lock, all 12x12 and evenly spaced; the filter and new-window buttons of the base miniwindow are not used here
-local HEADER_FIRST_GAP = 4
-local HEADER_GAP = 2
-
+-- header buttons (up only for a container inside another, sort menu, lock) are chained by UIMiniWindow; the
+-- filter and new-window buttons of the base miniwindow are hidden here
 function layoutContainerHeader(containerWindow)
-    local minimizeButton = containerWindow:recursiveGetChildById('minimizeButton')
-    if not minimizeButton then
-        return
-    end
-    local previous = minimizeButton
-    for _, id in ipairs({ 'upButton', 'contextMenuButton', 'lockButton' }) do
-        local button = containerWindow:recursiveGetChildById(id)
-        if button and button:isExplicitlyVisible() then
-            button:breakAnchors()
-            button:addAnchor(AnchorTop, previous:getId(), AnchorTop)
-            button:addAnchor(AnchorRight, previous:getId(), AnchorLeft)
-            button:setMarginRight(previous == minimizeButton and HEADER_FIRST_GAP or HEADER_GAP)
-            button:setMarginTop(0)
-            previous = button
-        end
-    end
+    containerWindow:layoutHeaderButtons()
 end
 
 function toggleContainerPages(containerWindow, pages)

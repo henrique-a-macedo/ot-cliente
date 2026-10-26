@@ -49,12 +49,9 @@ local function setupUIButtons()
         toggleFilterButton:setOn(false)
     end
     
+    -- positions come from UIMiniWindow:layoutHeaderButtons
     local contextMenuButton = skillsWindow:recursiveGetChildById('contextMenuButton')
-    local minimizeButton = skillsWindow:recursiveGetChildById('minimizeButton')
-    if contextMenuButton and minimizeButton then
-        contextMenuButton:addAnchor(AnchorTop, minimizeButton:getId(), AnchorTop)
-        contextMenuButton:addAnchor(AnchorRight, minimizeButton:getId(), AnchorLeft)
-        contextMenuButton:setMarginRight(7)
+    if contextMenuButton then
         contextMenuButton.onClick = function(widget, mousePos, mouseButton)
             return showSkillsContextMenu(widget, mousePos, mouseButton)
         end
@@ -343,6 +340,21 @@ local function hideOldClientStats()
     setSkillGroupVisibility('GameAdditionalSkills', features.additionalSkills)
 end
 
+-- menu option -> skill row it shows the bar of
+SKILL_MENU_ROWS = {
+    showLevel = 'level',
+    showStamina = 'stamina',
+    showOfflineTraining = 'offlineTraining',
+    showMagic = 'magiclevel',
+    showFist = 'skillId0',
+    showClub = 'skillId1',
+    showSword = 'skillId2',
+    showAxe = 'skillId3',
+    showDistance = 'skillId4',
+    showShielding = 'skillId5',
+    showFishing = 'skillId6'
+}
+
 local function hideMenuOptionsForOldClients(menu)
     if not g_game.getFeature(GameOfflineTrainingTime) then
         local offlineTrainingOption = menu:getChildById('showOfflineTraining')
@@ -367,6 +379,17 @@ function showSkillsContextMenu(widget, mousePos, mouseButton)
     menu:setGameMenu(true)
 
     hideMenuOptionsForOldClients(menu)
+    -- the classic Tibia skills (magic level, fist... fishing) are gone from the window: no toggle for a row that
+    -- is never shown
+    for _, choice in ipairs(menu:getChildren()) do
+        local skillId = SKILL_MENU_ROWS[choice:getId()]
+        if skillId then
+            local row = skillsWindow:recursiveGetChildById(skillId)
+            if not row or not row:isExplicitlyVisible() then
+                choice:setVisible(false)
+            end
+        end
+    end
 
     for _, choice in ipairs(menu:getChildren()) do
         local choiceId = choice:getId()
@@ -865,17 +888,7 @@ function skillController:onGameStart()
         if sepDefense and sepDefense:isVisible() then
             sepDefense:setVisible(false)
         end
-
-        local lockButton = skillsWindow:recursiveGetChildById('lockButton')
-        local contextMenuButton = skillsWindow:recursiveGetChildById('contextMenuButton')
-        
-        if lockButton and contextMenuButton then
-            lockButton:breakAnchors()
-            lockButton:addAnchor(AnchorTop, contextMenuButton:getId(), AnchorTop)
-            lockButton:addAnchor(AnchorRight, contextMenuButton:getId(), AnchorLeft)
-            lockButton:setMarginRight(2)
-            lockButton:setMarginTop(0)
-        end
+        skillsWindow:layoutHeaderButtons()
     end
     
     scheduleEvent(function() 
