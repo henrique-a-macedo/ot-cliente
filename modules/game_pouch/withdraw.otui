@@ -1,42 +1,50 @@
-// the withdraw modal: how many to take out as items
+// the withdraw modal, like Tibia's "Move Stackable Item": the stone's icon, how many on a slider (starts at all),
+// Withdraw / Cancel. Arrows and PageUp/PageDown move the slider, Enter confirms, Escape cancels (pouch.lua).
+// With a single unit the right click withdraws it directly and this window never opens.
 MainWindow
   id: withdrawWindow
   !text: tr('Withdraw')
-  size: 260 140
+  size: 280 116
   visible: false
   @onEscape: modules.game_pouch.cancelWithdraw()
   @onEnter: modules.game_pouch.confirmWithdraw()
 
+  Item
+    id: item
+    anchors.left: parent.left
+    anchors.top: parent.top
+    margin-top: 2
+    virtual: true
+    focusable: false
+
   Label
     id: what
-    anchors.top: parent.top
+    anchors.left: item.right
+    anchors.right: parent.right
+    anchors.top: item.top
+    margin-left: 8
+    margin-top: 1
+    color: #dfdfdf
+
+  HorizontalScrollBar
+    id: count
+    anchors.left: what.left
+    anchors.right: parent.right
+    anchors.top: what.bottom
+    margin-top: 5
+    focusable: false
+
+  HorizontalSeparator
+    id: separator
     anchors.left: parent.left
     anchors.right: parent.right
-    text-wrap: true
-    text-auto-resize: true
-
-  SpinBox
-    id: count
-    anchors.top: what.bottom
-    anchors.left: parent.left
-    width: 90
-    margin-top: 8
-    minimum: 1
-    maximum: 1
-
-  Button
-    id: allButton
-    !text: tr('All')
-    width: 50
-    anchors.left: count.right
-    anchors.verticalCenter: count.verticalCenter
-    margin-left: 6
-    @onClick: modules.game_pouch.withdrawAll()
+    anchors.bottom: cancelButton.top
+    margin-bottom: 8
 
   Button
     id: cancelButton
     !text: tr('Cancel')
-    width: 70
+    width: 64
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     @onClick: modules.game_pouch.cancelWithdraw()
@@ -44,7 +52,7 @@ MainWindow
   Button
     id: okButton
     !text: tr('Withdraw')
-    width: 70
+    width: 64
     anchors.right: cancelButton.left
     anchors.bottom: parent.bottom
     margin-right: 6

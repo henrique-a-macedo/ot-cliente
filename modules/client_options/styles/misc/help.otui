@@ -1,3 +1,4 @@
+// same spacing as the other option pages: panels 7 apart, each sized to its two buttons (padding 4 + 20 + 5 + 20 + 4)
 UIWidget
   anchors.fill: parent
   visible: false
@@ -5,39 +6,33 @@ UIWidget
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.top: parent.top
-    height: 60
+    height: 53
 
     QtButton
       !text: tr('Wiki')
       anchors.left: parent.left
       anchors.top: parent.top
       size: 130 20
-      margin-bottom: 10
-      margin-right: 10
       @onClick: g_platform.openUrl("https://github.com/mehah/otclient/wiki")
 
     QtButton
       !text: tr('Info')
       size: 130 20
       margin-top: 5
-     
       anchors.top: prev.bottom
       anchors.left: parent.left
-
       @onClick: g_platform.openUrl("https://github.com/mehah/otclient/wiki")
 
   SmallReversedQtPanel
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.top: prev.bottom
-    height: 55
-    margin-top: 5
+    height: 53
+    margin-top: 7
 
     QtButton
       !text: tr('Clear Cache')
       size: 130 20
-      margin-bottom: 10
-      margin-right: 10
       anchors.left: parent.left
       anchors.top: parent.top
       @onClick: |
@@ -45,6 +40,7 @@ UIWidget
         controller:scheduleEvent(function()
           g_app.restart()
         end, 1000)
+
     QtButton
       !text: tr('Change language')
       size: 130 20

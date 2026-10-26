@@ -1503,18 +1503,28 @@ function updateAppearanceText(widget, text)
     end
 end
 
+-- outfit field -> server list it is looked up in and the appearance text it fills. The lists are plural
+-- (ServerData.mounts) and the fields singular (outfit.mount): looked up by the field's own name, the mount (and
+-- familiar, aura, shader) never matched and the window said "Mount: None" while the character was mounted.
+local APPEARANCE_FIELDS = {
+    type = { list = "outfits", text = "outfit" },
+    mount = { list = "mounts", text = "mount" },
+    familiar = { list = "familiars", text = "familiar" },
+    wings = { list = "wings", text = "wings" },
+    auras = { list = "auras", text = "aura" },
+    effects = { list = "effects", text = "effects" },
+    shader = { list = "shaders", text = "shader" }
+}
+
 function updateAppearanceTexts(outfit)
     for _, appKey in ipairs(AppearanceData) do
         updateAppearanceText(appKey, "None")
     end
 
     for key, value in pairs(outfit) do
-        local newKey = key
-        local appKey = key
-        if key == "type" then
-            newKey = "outfits"
-            appKey = "outfit"
-        end
+        local field = APPEARANCE_FIELDS[key]
+        local newKey = field and field.list or key
+        local appKey = field and field.text or key
         local dataTable = ServerData[newKey]
         if dataTable then
             for _, data in ipairs(dataTable) do

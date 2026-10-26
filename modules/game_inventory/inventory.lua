@@ -346,6 +346,10 @@ function inventoryController:onInit()
 end
 
 function inventoryController:onGameStart()
+    -- after the extended view has laid out its columns
+    addEvent(function()
+        modules.game_interface.restoreExtendedPlace(inventoryController.ui)
+    end)
     local player = g_game.getLocalPlayer()
     if player then
         local char = g_game.getCharacterName()
@@ -563,6 +567,11 @@ function extendedView(extendedView)
             iconTopMenu = modules.client_topmenu.addTopRightToggleButton('inventory', tr('Show inventory'),
                 '/images/topbuttons/inventory', toggle)
             iconTopMenu:setOn(inventoryController.ui:isVisible())
+        end
+        -- the column it was dragged to is kept per character (game_interface)
+        modules.game_interface.trackExtendedPlace(inventoryController.ui)
+        if g_game.isOnline() then
+            modules.game_interface.restoreExtendedPlace(inventoryController.ui)
         end
     else
         if iconTopMenu then

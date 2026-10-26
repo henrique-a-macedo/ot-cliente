@@ -107,6 +107,27 @@ local function attributeTooltip(id, values)
     end
 end
 
+-- free points of the last message this session (nil until the first one after login): the player is told about
+-- unspent points when they log in with some and whenever they get more (level up, talents)
+local lastFreePoints = nil
+
+-- the first message arrives during login, before the console and the screen messages are ready: the warning goes out
+-- a moment later, on its own event, so it can never stop the window from being filled
+local WARN_DELAY = 1500
+
+local function warnFreePoints(free)
+    local gained = lastFreePoints == nil and free > 0 or lastFreePoints ~= nil and free > lastFreePoints
+    lastFreePoints = free
+    if gained then
+        scheduleEvent(function()
+            if g_game.isOnline() then
+                modules.game_textmessage.displayGameMessage(tr(
+                    'You have %d attribute points to spend. Open Skills and click + next to an attribute.', free))
+            end
+        end, WARN_DELAY)
+    end
+end
+
 local function onAttributesMessage(protocol, opcode, buffer)
     if not skillsWindow then
         return
@@ -129,6 +150,8 @@ local function onAttributesMessage(protocol, opcode, buffer)
     freeRow:getChildById('value'):setText(tostring(free))
     freeRow:setVisible(free > 0)
     freeRow:setTooltip(tr('Points to spend: click + next to an attribute. You get 5 points every 5 levels.'))
+
+    warnFreePoints(free)
 end
 
 function addAttributePoint(id)
@@ -1030,6 +1053,7 @@ local function resetTable(t)
 end
 
 function skillController:onGameEnd()
+    lastFreePoints = nil
     skillsWindow:setParent(nil, true)
     if expSpeedEvent then
         expSpeedEvent:cancel()

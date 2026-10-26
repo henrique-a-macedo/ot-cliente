@@ -1972,6 +1972,11 @@ function layoutExtendedConsole()
         return
     end
 
+    -- a chat the player dragged out stays where it was dropped (game_console: chatUndocked; its splitter is hidden)
+    if gameBottomPanel.chatUndocked then
+        return
+    end
+
     local free = gameRightExtraPanel:getX() - (gameLeftExtraPanel:getX() + gameLeftExtraPanel:getWidth())
     for _, widget in ipairs({ gameBottomPanel, bottomSplitter }) do
         widget:removeAnchor(AnchorLeft)
@@ -2001,6 +2006,50 @@ function layoutExtendedMinimap()
     holder:setSize({ width = SIDE_PANEL_WIDTH * 2 + 1, height = EXTENDED_MINIMAP_HEIGHT })
     holder:show()
     anchorSideColumns(side)
+end
+
+-- Extended view: the main panel windows (inventory, health) can be dragged to any column; which column and where in it
+-- is kept per character ('ExtendedPanelPlaces' node, by window id). Showing or hiding them stays with the top menu
+-- icons (client_topmenu). The normal view always docks them in the main panel.
+local EXTENDED_PLACES_NODE = 'ExtendedPanelPlaces'
+
+function rememberExtendedPlace(window)
+    local parent = window:getParent()
+    local name = g_game.getCharacterName()
+    if currentViewMode ~= 2 or not parent or parent:getClassName() ~= 'UIMiniWindowContainer' or not name or #name == 0 then
+        return
+    end
+    local all = g_settings.getNode(EXTENDED_PLACES_NODE) or {}
+    all[name] = all[name] or {}
+    all[name][window:getId()] = { parentId = parent:getId(), index = parent:getChildIndex(window) }
+    g_settings.setNode(EXTENDED_PLACES_NODE, all)
+end
+
+function restoreExtendedPlace(window)
+    if currentViewMode ~= 2 then
+        return
+    end
+    local all = g_settings.getNode(EXTENDED_PLACES_NODE) or {}
+    local own = all[g_game.getCharacterName()]
+    local place = own and own[window:getId()]
+    local parent = place and place.parentId and gameRootPanel:recursiveGetChildById(place.parentId)
+    if not parent or not parent:isVisible() or parent:getClassName() ~= 'UIMiniWindowContainer' then
+        return
+    end
+    if window:getParent() ~= parent then
+        UIWidget.setParent(window, parent)
+    end
+    local index = tonumber(place.index) or parent:getChildCount()
+    parent:moveChildToIndex(window, math.max(1, math.min(index, parent:getChildCount())))
+end
+
+-- the window remembers its column whenever it is dropped
+function trackExtendedPlace(window)
+    window.onDragLeave = function(self, droppedWidget, mousePos)
+        local result = UIMiniWindow.onDragLeave(self, droppedWidget, mousePos)
+        rememberExtendedPlace(self)
+        return result
+    end
 end
 
 -- top-menu minimap toggle: without the minimap the columns go back up to the top

@@ -33,8 +33,8 @@ UIWidget
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.top: prev.bottom
-    margin-top: 5
-    height:55
+    margin-top: 7
+    height: 55
     
     OptionCheckBoxMarked
       id: vsync

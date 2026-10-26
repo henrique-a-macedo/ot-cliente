@@ -34,6 +34,9 @@ function init()
     connect(Game, {
         onGameEnd = clean()
     })
+    connect(g_game, {
+        onGameEnd = onGameEndSaveLayouts
+    })
 
     reloadContainers()
 end
@@ -47,6 +50,9 @@ function terminate()
     })
     disconnect(Game, {
         onGameEnd = clean()
+    })
+    disconnect(g_game, {
+        onGameEnd = onGameEndSaveLayouts
     })
 end
 
@@ -63,8 +69,106 @@ function clean()
     end
 end
 
+-- Container windows get a session id from the server (container0, container1...), so the miniwindow settings never
+-- find them again. Their layout is kept per character and per container item type instead ('ContainerLayout' node):
+-- panel, place in it (or position outside a panel), height and minimized. Saved whenever the player changes it
+-- (drop, resize, minimize) and when the window closes; a container of the same type opens there again. A second
+-- open container of a type already shown goes to the first free panel, as before.
+local LAYOUT_NODE = 'ContainerLayout'
+
+local function layoutKey(container)
+    local item = container:getContainerItem()
+    return item and tostring(item:getId()) or nil
+end
+
+local function loadLayouts()
+    local all = g_settings.getNode(LAYOUT_NODE) or {}
+    return all[g_game.getCharacterName()] or {}
+end
+
+-- layoutReady: false while onContainerOpen sizes and places the window, so its default size is not saved over the
+-- player's. Not tied to g_game.isOnline(): on logout the containers close after the game is already offline.
+local function rememberLayout(window)
+    local parent = window:getParent()
+    local name = g_game.getCharacterName()
+    if not window.layoutKey or not window.layoutReady or not parent or not name or #name == 0 then
+        return
+    end
+    local layout = {
+        parentId = parent:getId(),
+        minimized = window:isOn(),
+        height = window:isOn() and window.maximizedHeight or window:getHeight()
+    }
+    if parent:getClassName() == 'UIMiniWindowContainer' then
+        layout.index = parent:getChildIndex(window)
+    else
+        layout.position = pointtostring(window:getPosition())
+    end
+    local all = g_settings.getNode(LAYOUT_NODE) or {}
+    all[name] = all[name] or {}
+    all[name][window.layoutKey] = layout
+    g_settings.setNode(LAYOUT_NODE, all)
+end
+
+local function isLayoutKeyShown(key, window)
+    for _, container in pairs(g_game.getContainers()) do
+        local other = container.window
+        if other and other ~= window and other.layoutKey == key and other:isVisible() then
+            return true
+        end
+    end
+    return false
+end
+
+-- puts a new container window where its type was last; false when there is no usable saved place
+local function placeFromLayout(window, key)
+    local layout = key and loadLayouts()[key]
+    if not layout or not layout.parentId or isLayoutKeyShown(key, window) then
+        return false
+    end
+    local parent = rootWidget:recursiveGetChildById(layout.parentId)
+    if not parent or not parent:isVisible() then
+        return false
+    end
+    parent:addChild(window)
+    if parent:getClassName() == 'UIMiniWindowContainer' then
+        if layout.index then
+            parent:moveChildToIndex(window, math.max(1, math.min(tonumber(layout.index), parent:getChildCount())))
+        end
+    elseif layout.position then
+        window:setPosition(topoint(layout.position))
+    end
+    return true
+end
+
+-- height and minimized state of the saved layout, after the window has its content height (same container type,
+-- same capacity: the saved height fits)
+local function applyLayoutSize(window, key)
+    local layout = key and loadLayouts()[key]
+    if not layout then
+        return
+    end
+    if tonumber(layout.height) then
+        window:setHeight(tonumber(layout.height))
+    end
+    if layout.minimized == true then
+        window:minimize(true)
+    end
+end
+
+function onGameEndSaveLayouts()
+    for _, container in pairs(g_game.getContainers()) do
+        if container.window and container.window:isVisible() then
+            rememberLayout(container.window)
+        end
+    end
+end
+
 function destroy(container)
     if container.window then
+        if container.window:isVisible() then
+            rememberLayout(container.window)
+        end
         container.window:destroy()
         container.window = nil
         container.itemsPanel = nil
@@ -875,9 +979,23 @@ function onContainerOpen(container, previousContainer)
         containerWindow = g_ui.createWidget('ContainerWindow')
     end
     containerWindow:setId('container' .. container:getId())
+    -- going into a bag inside reuses the window: its place is saved under the bag shown when it changes or closes
+    containerWindow.layoutReady = false
+    containerWindow.layoutKey = layoutKey(container)
+    containerWindow.onHeightChange = function(self, height)
+        UIMiniWindow.onHeightChange(self, height)
+        rememberLayout(self)
+    end
+    -- the drop already put the window in its new panel (UIMiniWindow.onDragLeave saves its own settings there too)
+    containerWindow.onDragLeave = function(self, droppedWidget, mousePos)
+        local result = UIMiniWindow.onDragLeave(self, droppedWidget, mousePos)
+        rememberLayout(self)
+        return result
+    end
     local containerPanel = containerWindow:getChildById('contentsPanel')
     local containerItemWidget = containerWindow:getChildById('containerItemWidget')
     containerWindow.onClose = function()
+        rememberLayout(containerWindow)
         g_game.close(container)
         containerWindow:hide()
     end
@@ -1022,9 +1140,13 @@ function onContainerOpen(container, previousContainer)
         end
     end
 
+    local placedFromLayout = false
     if not previousContainer then
-        local panel = modules.game_interface.findContentPanelAvailable(containerWindow, cellSize.height)
-        panel:addChild(containerWindow)
+        placedFromLayout = placeFromLayout(containerWindow, containerWindow.layoutKey)
+        if not placedFromLayout then
+            local panel = modules.game_interface.findContentPanelAvailable(containerWindow, cellSize.height)
+            panel:addChild(containerWindow)
+        end
     end
 
     if not previousContainer or previousContainer:getCapacity() >= container:getCapacity() then
@@ -1041,7 +1163,11 @@ function onContainerOpen(container, previousContainer)
     end
 
     containerWindow:setup()
-    
+    if placedFromLayout then
+        applyLayoutSize(containerWindow, containerWindow.layoutKey)
+    end
+    containerWindow.layoutReady = true
+
     -- Apply current sorting mode if one is active and manual sort mode is disabled
     local currentSortMode = containerSettings and containerSettings['currentSortMode']
     local isManualSortEnabled = containerSettings and containerSettings['useManualSortMode'] == 1

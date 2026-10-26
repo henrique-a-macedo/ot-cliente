@@ -21,4 +21,5 @@ Module
     dofile 'spells'
     dofile 'tile'
     dofile 'items'
+    dofile 'layoutinherit'
     dofiles 'ui'

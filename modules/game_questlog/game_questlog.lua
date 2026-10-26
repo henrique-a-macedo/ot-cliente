@@ -564,20 +564,34 @@ local function toggle()
     show()
 end
 
+-- a tracker with no saved place (or whose saved panel is gone) goes to the first panel with room
+local function openTracker()
+    if not trackerMiniWindow:getParent() then
+        local panel = modules.game_interface
+                          .findContentPanelAvailable(trackerMiniWindow, trackerMiniWindow:getMinimumHeight())
+        if not panel then
+            return
+        end
+        panel:addChild(trackerMiniWindow)
+    end
+    trackerMiniWindow:open()
+end
+
+-- isVisible, not isOn: a miniwindow is "on" when it is minimized
 local function toggleTracker()
-    if trackerMiniWindow:isOn() then
+    if trackerMiniWindow:isVisible() then
         trackerMiniWindow:close()
     else
-        if not trackerMiniWindow:getParent() then
-            local panel = modules.game_interface
-                              .findContentPanelAvailable(trackerMiniWindow, trackerMiniWindow:getMinimumHeight())
-            if not panel then
-                return
-            end
-            panel:addChild(trackerMiniWindow)
-        end
-        trackerMiniWindow:open()
+        openTracker()
     end
+end
+
+-- the tracker was left open by this character last time (UIMiniWindow settings, 'CharMiniWindows' node)
+local function trackerWasOpen()
+    local all = g_settings.getNode('CharMiniWindows')
+    local own = all and all[g_game.getCharacterName()]
+    local tracker = own and own.QuestLogTracker
+    return tracker ~= nil and tracker.closed == false
 end
 --[[=================================================
 =                        miniWindows                     =
@@ -783,9 +797,10 @@ local function showQuestTracker()
     if not isReceivingQuestTracker and settings[namePlayer] and #settings[namePlayer] > 0 then
         rebuildTrackerFromSettings()
     end
-    
-    toggleTracker()
 
+    -- created on demand, after the login's setupOnStart: take the saved place and size now, then show it
+    trackerMiniWindow:setupOnStart()
+    openTracker()
 end
 
 --[[=================================================
@@ -1083,7 +1098,8 @@ function questLogController:toggleMiniWindowsTracker()
         if buttonQuestLogTrackerButton then
             buttonQuestLogTrackerButton:setOn(false)
         end
-        return trackerMiniWindow:hide()
+        -- close, not hide: the closed state is saved, so it stays closed on the next login
+        return trackerMiniWindow:close()
     end
     if buttonQuestLogTrackerButton then
         buttonQuestLogTrackerButton:setOn(true)
@@ -1296,6 +1312,9 @@ function questLogController:onGameStart()
             trackerMiniWindow:setupOnStart()
             -- Rebuild tracker from saved settings
             rebuildTrackerFromSettings()
+        elseif trackerWasOpen() then
+            -- the window only exists once opened: a tracker left open comes back on login
+            showQuestTracker()
         end
 
         -- Send local tracker cache on login, matching the official client behavior.

@@ -91,8 +91,12 @@ function FloatingPanel.attach(widget, settingsKey, menuBuilder)
         if menuBuilder then
             menuBuilder(menu)
         end
-        -- opened at the cursor itself (g_window.getMousePosition), wherever the release reported it
-        menu:display()
+        -- opened at the click, kept on the box: containsPoint above already checked this mousePos, the global
+        -- g_window.getMousePosition is not tied to the box and opened the menu away from it
+        menu:display({
+            x = math.max(self:getX(), math.min(mousePos.x, self:getX() + self:getWidth() - 1)),
+            y = math.max(self:getY(), math.min(mousePos.y, self:getY() + self:getHeight() - 1))
+        })
         return true
     end
 

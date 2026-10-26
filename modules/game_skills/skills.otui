@@ -205,6 +205,14 @@ MiniWindow
 
     // attributes replace use-based skills (values come from the server, opcode 120)
     SkillButton
+      id: attrHeader
+      height: 15
+      !tooltip: tr('Attributes shape your character: each one raises a kind of damage, defense or regeneration.\nYou get 5 points every 5 levels; spend them with the + next to an attribute.\nHover an attribute to see what it does now.')
+      SkillNameLabel
+        !text: tr('Attributes')
+        color: #FFFFFF
+
+    SkillButton
       id: attrStr
       height: 15
       SkillNameLabel
