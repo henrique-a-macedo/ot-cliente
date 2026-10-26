@@ -1,0 +1,125 @@
+// the quest journal: every quest with stages, grouped (in progress, available, done), and the selected one in detail
+JournalGroup < Label
+  height: 18
+  margin-top: 6
+  padding-left: 2
+  font: verdana-11px-rounded
+  color: #e8c46a
+  phantom: true
+
+  $first:
+    margin-top: 0
+
+JournalQuest < Label
+  height: 16
+  padding-left: 10
+  focusable: true
+  color: #dfdfdf
+  background-color: alpha
+
+  $focus:
+    background-color: #ffffff22
+    color: #ffffff
+
+  $disabled:
+    color: #808080
+
+JournalHeading < Label
+  margin-top: 8
+  font: verdana-11px-rounded
+  color: #e8c46a
+  text-auto-resize: true
+
+  $first:
+    margin-top: 0
+
+JournalText < Label
+  margin-top: 2
+  color: #c0c0c0
+  text-wrap: true
+  text-auto-resize: true
+
+JournalTitle < Label
+  font: verdana-11px-rounded
+  color: #ffffff
+  text-auto-resize: true
+
+MainWindow
+  id: questJournal
+  !text: tr('Quest Journal')
+  size: 640 440
+  visible: false
+  @onEscape: modules.game_questtracker.closeJournal()
+
+  TextEdit
+    id: search
+    anchors.top: parent.top
+    anchors.left: parent.left
+    width: 210
+    placeholder: Search
+    placeholder-color: #c0c0c0c0
+
+  TextList
+    id: questList
+    vertical-scrollbar: questListScroll
+    anchors.top: search.bottom
+    anchors.left: parent.left
+    anchors.bottom: closeButton.top
+    margin-top: 6
+    margin-bottom: 10
+    padding: 2
+    width: 210
+    focusable: false
+
+  VerticalScrollBar
+    id: questListScroll
+    anchors.top: questList.top
+    anchors.bottom: questList.bottom
+    anchors.right: questList.right
+    step: 16
+    pixels-scroll: true
+
+  ScrollablePanel
+    id: detail
+    anchors.top: parent.top
+    anchors.left: questList.right
+    anchors.right: detailScroll.left
+    anchors.bottom: questList.bottom
+    margin-left: 12
+    margin-right: 4
+    vertical-scrollbar: detailScroll
+    layout:
+      type: verticalBox
+
+  VerticalScrollBar
+    id: detailScroll
+    anchors.top: detail.top
+    anchors.bottom: detail.bottom
+    anchors.right: parent.right
+    step: 16
+    pixels-scroll: true
+
+  CheckBox
+    id: trackCheck
+    !text: tr('Track this quest')
+    anchors.left: detail.left
+    anchors.bottom: parent.bottom
+    width: 140
+    @onCheckChange: modules.game_questtracker.onTrackCheck(self:isChecked())
+
+  CheckBox
+    id: autoTrackCheck
+    !text: tr('Track new quests')
+    anchors.left: trackCheck.right
+    anchors.bottom: parent.bottom
+    margin-left: 12
+    width: 140
+    @onCheckChange: modules.game_questtracker.setAutoTrack(self:isChecked())
+
+  Button
+    id: closeButton
+    !text: tr('Close')
+    width: 64
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_questtracker.closeJournal()

@@ -261,8 +261,146 @@ function toggleMini()
     miniWindow:open()
 end
 
--- the journal (Task 7) fills this in
-openJournal = openJournal or function() end
+-- journal ---------------------------------------------------------------------------------------------------------
+local journal = nil
+local selected = nil
+
+local GROUPS = {
+    { title = 'In progress', states = { active = true } },
+    { title = 'Available', states = { available = true, locked = true } },
+    { title = 'Done', states = { done = true } }
+}
+
+local function addText(parent, style, text)
+    local label = g_ui.createWidget(style, parent)
+    label:setText(text)
+    return label
+end
+
+local function showDetail(id)
+    selected = id
+    local detail = journal:getChildById('detail')
+    detail:destroyChildren()
+    local view = id and quests[id]
+    local trackCheck = journal:getChildById('trackCheck')
+    trackCheck.updating = true
+    trackCheck:setChecked(view ~= nil and isTracked(id))
+    trackCheck:setEnabled(view ~= nil and view.state == 'active')
+    trackCheck.updating = false
+    if not view then
+        addText(detail, 'JournalText', tr('Pick a quest on the left.'))
+        return
+    end
+    addText(detail, 'JournalTitle', view.name)
+    if view.state == 'locked' then
+        addText(detail, 'JournalText', tr('Not available yet: %s', view.reason or '?')):setColor('#c08060')
+    elseif view.state == 'done' then
+        addText(detail, 'JournalText', tr('Completed.')):setColor('#7fbf6f')
+    end
+    if view.description ~= '' then
+        addText(detail, 'JournalText', view.description)
+    end
+    if view.start ~= '' and (view.state == 'available' or view.state == 'locked') then
+        addText(detail, 'JournalHeading', tr('Where it starts'))
+        addText(detail, 'JournalText', view.start)
+    end
+    if #view.done > 0 then
+        addText(detail, 'JournalHeading', tr('Done'))
+        addText(detail, 'JournalText', table.concat(view.done, ', '))
+    end
+    if view.stage then
+        addText(detail, 'JournalHeading', tr('Now (%d of %d): %s', view.stage.index, view.stage.count, view.stage.title))
+        if view.stage.text ~= '' then
+            addText(detail, 'JournalText', view.stage.text)
+        end
+        for _, objective in ipairs(view.stage.objectives) do
+            local current, target = objectiveCount(objective)
+            local line = addText(detail, 'JournalText', '- ' .. objectiveText(objective))
+            if current >= target then
+                line:setColor('#7fbf6f')
+            end
+        end
+        if #view.rewards > 0 then
+            addText(detail, 'JournalHeading', tr('Reward for this step'))
+            addText(detail, 'JournalText', table.concat(view.rewards, ', '))
+        end
+    end
+    if #view.final > 0 and view.state ~= 'done' then
+        addText(detail, 'JournalHeading', tr('Final reward'))
+        addText(detail, 'JournalText', table.concat(view.final, ', '))
+    end
+end
+
+local function drawJournal()
+    if not journal or not journal:isVisible() then
+        return
+    end
+    local list = journal:getChildById('questList')
+    local filter = journal:getChildById('search'):getText():lower()
+    list.onChildFocusChange = nil
+    list:destroyChildren()
+    local focus = nil
+    for _, group in ipairs(GROUPS) do
+        local header = nil
+        for _, id in ipairs(questOrder) do
+            local view = quests[id]
+            if view and group.states[view.state] and (filter == '' or view.name:lower():find(filter, 1, true)) then
+                if not header then
+                    header = addText(list, 'JournalGroup', tr(group.title))
+                end
+                local row = addText(list, 'JournalQuest', view.name)
+                row.questId = id
+                if view.state == 'locked' then
+                    row:setColor('#808080')
+                    row:setTooltip(view.reason)
+                end
+                if id == selected then
+                    focus = row
+                end
+            end
+        end
+    end
+    if list:getChildCount() == 0 then
+        addText(list, 'JournalGroup', tr('No quests yet.'))
+    end
+    if focus then
+        list:focusChild(focus, KeyboardFocusReason)
+    end
+    list.onChildFocusChange = function(_, child)
+        if child and child.questId then
+            showDetail(child.questId)
+        end
+    end
+    showDetail(selected)
+end
+
+function openJournal(id)
+    if not journal then
+        return
+    end
+    if id then
+        selected = id
+    end
+    journal:getChildById('autoTrackCheck'):setChecked(isAutoTrack())
+    journal:show()
+    journal:raise()
+    journal:focus()
+    drawJournal()
+    requestList()
+end
+
+function closeJournal()
+    if journal then
+        journal:hide()
+    end
+end
+
+function onTrackCheck(checked)
+    local trackCheck = journal and journal:getChildById('trackCheck')
+    if trackCheck and not trackCheck.updating and selected then
+        setTracked(selected, checked)
+    end
+end
 
 local function onGameStart()
     settings = characterSettings()
@@ -273,6 +411,7 @@ local function onGameStart()
 end
 
 local function onGameEnd()
+    closeJournal()
     settings = nil
     quests, questOrder = {}, {}
     changed(nil)
@@ -282,7 +421,7 @@ function init()
     miniWindow = g_ui.loadUI('mini')
     miniWindow:setup()
     miniWindow:setContentMinimumHeight(30)
-    for _, id in ipairs({ 'toggleFilterButton', 'newWindowButton', 'contextMenuButton' }) do
+    for _, id in ipairs({ 'toggleFilterButton', 'newWindowButton' }) do
         local button = miniWindow:recursiveGetChildById(id)
         if button then
             button:setVisible(false)
@@ -290,8 +429,31 @@ function init()
     end
     miniButton = modules.game_mainpanel.addToggleButton('questTrackerButton', tr('Quest Tracker'),
         '/images/options/button_questlog_tracker', toggleMini, false, 1001)
+    journal = g_ui.displayUI('journal')
+    journal:hide()
+    journal:getChildById('search').onTextChange = function()
+        drawJournal()
+    end
+    -- the mini window's menu button: the journal and the auto-track option
+    local menuButton = miniWindow:recursiveGetChildById('contextMenuButton')
+    if menuButton then
+        menuButton:setVisible(true)
+        menuButton.onClick = function(widget, mousePos)
+            local menu = g_ui.createWidget('PopupMenu')
+            menu:setGameMenu(true)
+            menu:addOption(tr('Open quest journal'), function()
+                openJournal()
+            end)
+            menu:addCheckBox(tr('Track new quests'), isAutoTrack(), function(_, checked)
+                setAutoTrack(checked)
+            end)
+            menu:display(mousePos)
+            return true
+        end
+    end
     onChange(function()
         drawMini()
+        drawJournal()
     end)
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onMessage)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
@@ -320,5 +482,9 @@ function terminate()
     if miniWindow then
         miniWindow:destroy()
         miniWindow = nil
+    end
+    if journal then
+        journal:destroy()
+        journal = nil
     end
 end
