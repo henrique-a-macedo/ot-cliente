@@ -1,7 +1,7 @@
 -- Currency pouch (server opcode 124, forgottenserver data/scripts/lib/currency_pouch.lua).
 -- A side window like VIP or Battle (docks in the columns, minimizes, locks): what the player keeps in the pouch,
--- grouped; Take opens a small window to choose how many come out as stackable items (to trade). Using a stone item
--- puts it back (server side).
+-- grouped, one line per currency; a right click on it opens a small window to choose how many come out as stackable
+-- items (to trade). Using a stone item puts it back (server side).
 local OPCODE = 124
 
 pouchWindow = nil
@@ -26,16 +26,42 @@ local function showResult(status, message)
     end
 end
 
+local function withdraw(currency, amount)
+    send(string.format('withdraw:%s:%d', currency.key, amount))
+end
+
+local function showWithdrawCount(value)
+    withdrawWindow.what:setText(string.format('%s: %d / %d', pending.name, value, pending.amount))
+    withdrawWindow.item:setItemCount(value)
+end
+
+-- a single unit comes out at once; more opens the slider, starting at all of them
 local function openWithdraw(currency)
+    if currency.amount <= 1 then
+        withdraw(currency, 1)
+        return
+    end
     pending = currency
-    withdrawWindow.what:setText(tr('How many %s? You have %d.', currency.name, currency.amount))
-    withdrawWindow.count:setMinimum(1)
-    withdrawWindow.count:setMaximum(currency.amount)
-    withdrawWindow.count:setValue(1)
+    withdrawWindow.item:setItemId(currency.clientId or 0)
+    local slider = withdrawWindow.count
+    slider.onValueChange = nil
+    slider:setMinimum(1)
+    slider:setMaximum(currency.amount)
+    slider:setValue(currency.amount)
+    slider.onValueChange = function(_, value)
+        showWithdrawCount(value)
+    end
+    showWithdrawCount(currency.amount)
     withdrawWindow:show()
     withdrawWindow:raise()
     withdrawWindow:focus()
-    withdrawWindow.count:focus()
+end
+
+local function nudgeWithdraw(delta)
+    if pending then
+        local slider = withdrawWindow.count
+        slider:setValue(math.max(1, math.min(slider:getValue() + delta, pending.amount)))
+    end
 end
 
 -- every section shows with its title (General, League...), even empty
@@ -53,10 +79,23 @@ local function render(groups)
             local row = g_ui.createWidget('PouchRow', list)
             row.name:setText(currency.name)
             row.amount:setText('x' .. currency.amount)
-            row:setTooltip(currency.name .. '\n' .. (currency.description or ''))
-            row.withdraw:setVisible(currency.withdrawable)
-            row.withdraw.onClick = function()
-                openWithdraw(currency)
+            local tooltip = currency.name .. '\n' .. (currency.description or '')
+            if currency.withdrawable then
+                tooltip = tooltip .. '\n' .. tr('Right click to withdraw as items, to trade.')
+            end
+            row:setTooltip(tooltip)
+            -- the row must take the press, or the release never reaches it
+            row.onMousePress = function(widget, mousePos, mouseButton)
+                return mouseButton == MouseRightButton
+            end
+            row.onMouseRelease = function(widget, mousePos, mouseButton)
+                if mouseButton ~= MouseRightButton or not widget:containsPoint(mousePos) then
+                    return false
+                end
+                if currency.withdrawable then
+                    openWithdraw(currency)
+                end
+                return true
             end
         end
     end
@@ -75,15 +114,9 @@ end
 
 function confirmWithdraw()
     if pending then
-        send(string.format('withdraw:%s:%d', pending.key, withdrawWindow.count:getValue()))
+        withdraw(pending, withdrawWindow.count:getValue())
     end
     cancelWithdraw()
-end
-
-function withdrawAll()
-    if pending then
-        withdrawWindow.count:setValue(pending.amount)
-    end
 end
 
 function cancelWithdraw()
@@ -138,6 +171,11 @@ function init()
     pouchWindow = g_ui.loadUI('pouch')
     withdrawWindow = g_ui.displayUI('withdraw')
     withdrawWindow:hide()
+    for key, delta in pairs({ Left = -1, Right = 1, Down = -1, Up = 1, PageDown = -10, PageUp = 10 }) do
+        g_keyboard.bindKeyPress(key, function()
+            nudgeWithdraw(delta)
+        end, withdrawWindow)
+    end
     pouchWindow:setup()
     pouchWindow:setContentMinimumHeight(40)
     for _, id in ipairs({ 'toggleFilterButton', 'newWindowButton', 'contextMenuButton' }) do

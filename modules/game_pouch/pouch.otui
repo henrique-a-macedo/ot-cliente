@@ -20,38 +20,34 @@ PouchEmpty < Label
   font: verdana-9px-rounded
   color: #808080
 
-// text-only row: name; amount followed by the take button (what it does is on the tooltip)
+// one line: name on the left, amount on the right; a right click takes some out (pouch.lua, tooltip says so)
 PouchRow < UIWidget
-  height: 48
-  margin-top: 4
+  height: 18
+  margin-top: 2
   padding-left: 4
-  padding-right: 2
-  padding-top: 2
-  background-color: #ffffff0a
+  padding-right: 4
+  // the hover color only goes away if the base state sets one to return to
+  background-color: alpha
+
+  $hover:
+    background-color: #ffffff18
+
+  Label
+    id: amount
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    text-auto-resize: true
+    color: #8fd18f
+    phantom: true
 
   Label
     id: name
     anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: parent.top
-    margin-top: 2
+    anchors.right: amount.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 6
     color: #dfdfdf
-
-  Label
-    id: amount
-    anchors.left: parent.left
-    anchors.top: name.bottom
-    margin-top: 8
-    text-auto-resize: true
-    color: #8fd18f
-
-  Button
-    id: withdraw
-    !text: tr('Take')
-    !tooltip: tr('Withdraw as items, to trade')
-    anchors.left: amount.right
-    anchors.verticalCenter: amount.verticalCenter
-    margin-left: 12
+    phantom: true
 
 MiniWindow
   id: pouchWindow
