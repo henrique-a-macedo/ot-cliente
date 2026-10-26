@@ -91,7 +91,8 @@ function FloatingPanel.attach(widget, settingsKey, menuBuilder)
         if menuBuilder then
             menuBuilder(menu)
         end
-        menu:display(mousePos)
+        -- opened at the cursor itself (g_window.getMousePosition), wherever the release reported it
+        menu:display()
         return true
     end
 
