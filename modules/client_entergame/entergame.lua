@@ -19,6 +19,27 @@ local motdEnabled = true
 local tokenWindow
 local authErrorBox
 local hasAttemptedAuthenticator = false
+-- one-use ticket from the launcher (it logs in and opens the client with OTC_LAUNCH_TICKET); traded for the session
+-- by the first login (contratos-cross-repo.md, section 9)
+local launchTicket = os.getenv('OTC_LAUNCH_TICKET')
+if launchTicket == '' then
+    launchTicket = nil
+end
+-- distribution client without a ticket: there is no password login, the way in is Play in the launcher
+local launcherNotice
+local function showLauncherNotice()
+    if launcherNotice then
+        return
+    end
+    launcherNotice = displayInfoBox(tr('Login'),
+        tr('To enter the game, click Play in the launcher.\nThe client will close now.'))
+    connect(launcherNotice, {
+        onOk = function()
+            launcherNotice = nil
+            g_app.exit()
+        end
+    })
+end
 
 -- private functions
 local function onError(protocol, message, errorCode)
@@ -322,6 +343,11 @@ end
 function EnterGame.firstShow()
     EnterGame.show()
 
+    if launchTicket then
+        addEvent(EnterGame.doLogin)
+        return
+    end
+
     local host = g_settings.get('host')
     local servers = g_settings.getNode('ServerList') or {}
     local serverData = servers[host] or {}
@@ -542,6 +568,11 @@ function EnterGame.show()
         return
     end
 
+    if DISTRIBUTION_BUILD and not launchTicket then
+        showLauncherNotice()
+        return
+    end
+
     enterGame:show()
     enterGame:raise()
     enterGame:focus()
@@ -681,6 +712,10 @@ function EnterGame.tryHttpLogin(clientVersion, httpLogin)
     G.requestId = math.random(1)
 
     local http = LoginHttp.create()
+    if G.ticket then
+        http:setTicket(G.ticket)
+        G.ticket = nil
+    end
     http:httpLogin(host, path, G.port, G.account, G.password, G.requestId, httpLogin, G.authenticatorToken)
 end
 
@@ -790,6 +825,16 @@ function EnterGame.doLogin()
 
     if g_game.isOnline() then
         local errorBox = displayErrorBox(tr('Login Error'), tr('Cannot login while already in game.'))
+        connect(errorBox, {
+            onOk = EnterGame.show
+        })
+        return
+    end
+
+    G.ticket = launchTicket
+    launchTicket = nil
+    if DISTRIBUTION_BUILD and not G.ticket then
+        local errorBox = displayErrorBox(tr('Login Error'), tr('Open the game through the launcher (Play button).'))
         connect(errorBox, {
             onOk = EnterGame.show
         })

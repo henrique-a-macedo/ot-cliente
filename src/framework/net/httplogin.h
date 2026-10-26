@@ -53,6 +53,10 @@ public:
 
     void cancel();
 
+    // launch ticket from the launcher (OTC_LAUNCH_TICKET): when set, the request is {type: "ticket"} instead of the
+    // email/password login (arch/.claude/ref/workspace/contratos-cross-repo.md, section 9)
+    void setTicket(const std::string& ticket) { m_ticket = ticket; }
+
     enum Result : int { Success = 200, Error = -1 };
 
 private:
@@ -81,5 +85,14 @@ private:
     std::string worlds;
     std::string session;
     std::string errorMessage;
+    std::string m_ticket;
     std::atomic<bool> cancelled;
+
+    // replaces the login body by the ticket exchange when a ticket was set
+    template<typename Json>
+    void applyTicket(Json& body) const
+    {
+        if (!m_ticket.empty())
+            body = Json{ {"type", "ticket"}, {"ticket", m_ticket} };
+    }
 };

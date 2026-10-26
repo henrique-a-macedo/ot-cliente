@@ -57,6 +57,17 @@
       }
     },
     {
+      "name": "windows-dist",
+      "inherits": "windows-release",
+      "displayName": "Windows - Distribution (player client)",
+      "description": "Release without console, signed packages only (OPTIONS_DISTRIBUTION); pass -DOTC_MANIFEST_PUBLIC_KEY=<base64>",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OPTIONS_DISTRIBUTION": "ON",
+        "TOGGLE_BIN_FOLDER": "ON"
+      }
+    },
+    {
       "name": "windows-release-asan",
       "inherits": "windows-release",
       "displayName": "Windows - Release + ASAN",

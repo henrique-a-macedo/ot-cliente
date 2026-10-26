@@ -27,6 +27,7 @@
 #include <bitlib/lbitlib.c>
 #endif
 
+#include <framework/core/distribution.h>
 #include <framework/core/resourcemanager.h>
 
 LuaInterface g_lua;
@@ -819,6 +820,29 @@ void LuaInterface::createLuaState()
     pushCFunction(&LuaInterface::luaScriptLoader);
     rawSeti(5);
     pop(2);
+
+    // distribution build: require() only through preload and the PhysFS loader above (never .lua/.dll straight
+    // from disk), no package.loadlib; DISTRIBUTION_BUILD lets init.lua skip mods/otclientrc/debugger
+    if constexpr (distribution::enabled()) {
+        getGlobal("package");
+        getField("loaders");
+        pushCFunction(&LuaInterface::luaScriptLoader);
+        rawSeti(2);
+        for (const int i : { 5, 4, 3 }) {
+            pushNil();
+            rawSeti(i);
+        }
+        pop();
+        pushNil();
+        setField("loadlib");
+        pushString("");
+        setField("path");
+        pushString("");
+        setField("cpath");
+        pop();
+    }
+    pushBoolean(distribution::enabled());
+    setGlobal("DISTRIBUTION_BUILD");
 
     // replace dofile
     pushCFunction(&LuaInterface::lua_dofile);
