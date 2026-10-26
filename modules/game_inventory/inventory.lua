@@ -3,7 +3,7 @@ local iconTopMenu = nil
 local inventoryShrink = false
 
 local pvpModeRadioGroup = nil 
-local monkMirrorItem = nil
+local twoHandMirrorItem = nil
 
 local function getInventoryUi()
     if inventoryShrink then
@@ -26,18 +26,19 @@ local getSlotPanelBySlot = {
     [InventorySlotAmmo] = function(ui) return ui.tools, ui.tools.tools end
 }
 
-local function isPlayerMonk()
-    local player = g_game.getLocalPlayer()
-    if not player then
+-- a two-handed weapon has the 'clothes' flag with slot 0 (one-handed weapons use 6, shields 5); slot 0 alone is
+-- also the default of items without the flag, so the flag must be checked too
+local function isTwoHanded(item)
+    if not item then
         return false
     end
-    return player:isMonk()
+    local thingType = g_things.getThingType(item:getId(), ThingCategoryItem)
+    return thingType ~= nil and thingType:isCloth() and thingType:getClothSlot() == 0
 end
 
-local function updateMonkMirrorItem(leftItem)
-    if not g_game.getFeature(GameVocationMonk) then
-        return
-    end
+-- two-handed weapon in the weapon slot: show it mirrored and translucent in the empty shield slot, which is
+-- blocked until the weapon leaves
+local function updateTwoHandMirror(leftItem)
     if inventoryShrink then
         return
     end
@@ -50,36 +51,31 @@ local function updateMonkMirrorItem(leftItem)
     local shieldSlot = ui.shield
     local shieldItemWidget = shieldSlot.item
 
-    if not isPlayerMonk() then
-        if monkMirrorItem then
-            monkMirrorItem = nil
-        end
-        return
-    end
-
     local player = g_game.getLocalPlayer()
     local realShieldItem = player and player:getInventoryItem(InventorySlotRight)
 
     if realShieldItem then
-        monkMirrorItem = nil
+        twoHandMirrorItem = nil
         return
     end
 
-    if leftItem then
-        monkMirrorItem = leftItem
+    if isTwoHanded(leftItem) then
+        twoHandMirrorItem = leftItem
         shieldItemWidget:setItem(leftItem)
         shieldItemWidget:setOpacity(0.5)
         shieldItemWidget:setDraggable(false)
         shieldItemWidget:setEnabled(false)
         shieldItemWidget:setFlipDirection(FlipDirection.Horizontal)
+        shieldItemWidget:setTooltip(tr('Both hands are used by the two-handed weapon'))
         shieldSlot.shield:setEnabled(false)
-    else
-        monkMirrorItem = nil
+    elseif twoHandMirrorItem then
+        twoHandMirrorItem = nil
         shieldItemWidget:setItem(nil)
         shieldItemWidget:setOpacity(1.0)
         shieldItemWidget:setDraggable(true)
         shieldItemWidget:setEnabled(true)
         shieldItemWidget:setFlipDirection(FlipDirection.None)
+        shieldItemWidget:removeTooltip()
         shieldSlot.shield:setEnabled(true)
         if shieldItemWidget.tier then
             shieldItemWidget.tier:setVisible(false)
@@ -123,7 +119,7 @@ local function inventoryEvent(player, slot, item, oldItem)
         return
     end
 
-    if slot == InventorySlotRight and isPlayerMonk() and not item and monkMirrorItem then
+    if slot == InventorySlotRight and not item and twoHandMirrorItem then
         return
     end
 
@@ -133,7 +129,8 @@ local function inventoryEvent(player, slot, item, oldItem)
         slotPanel.item:setDraggable(true)
         slotPanel.item:setEnabled(true)
         slotPanel.item:setFlipDirection(FlipDirection.None)
-        monkMirrorItem = nil
+        slotPanel.item:removeTooltip()
+        twoHandMirrorItem = nil
     end
 
     local slotPanel, toggler = getSlotInfo(ui)
@@ -153,7 +150,7 @@ local function inventoryEvent(player, slot, item, oldItem)
             g_game.sendWeaponProficiencyAction(WeaponProficiency.WEAPON_PROFICIENCY_ITEM_INFO, item:getId())
             modules.game_proficiency.updateTopBarProficiency()
         end
-        updateMonkMirrorItem(item)
+        updateTwoHandMirror(item)
     end
 end
 
@@ -402,16 +399,13 @@ function inventoryController:onGameStart()
     end
     inventoryController.ui.onPanel.purseButton:setVisible(g_game.getFeature(GamePurseSlot))
 
-    if isPlayerMonk() and player then
-        local leftItem = player:getInventoryItem(InventorySlotLeft)
-        if leftItem then
-            updateMonkMirrorItem(leftItem)
-        end
+    if player then
+        updateTwoHandMirror(player:getInventoryItem(InventorySlotLeft))
     end
 end
 
 function inventoryController:onGameEnd()
-    monkMirrorItem = nil
+    twoHandMirrorItem = nil
 
     local lastCombatControls = g_settings.getNode('LastCombatControls')
     if not lastCombatControls then

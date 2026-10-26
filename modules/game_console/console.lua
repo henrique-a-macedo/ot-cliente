@@ -147,7 +147,6 @@ local NPC_TALK_RADIUS = 3
 consolePanel = nil
 consoleContentPanel = nil
 local extendedViewButtonToggleChat = nil
-local extendedViewButtonShowAlphaChat = nil
 local gameBottomPanel = nil
 -- Tibia-like: when returnDisablesChat is enabled, pressing Enter in walk (WASD) mode opens a
 -- temporary chat (marked with '*') that returns to WASD after a single message is sent.
@@ -322,11 +321,11 @@ function consoleController:onInit()
     readOnlyButton = consolePanel:getChildById("readOnlyButton")
     readOnlyPanel = consolePanel:getChildById("readOnlyPanel")
     function readOnlyButton.onMousePress(tab, mousePos, mouseButton)
-		if mouseButton == MouseRightButton then
-			onReadOnlyMouseClick()
-			return true
-		end
-	end
+        if mouseButton == MouseLeftButton or mouseButton == MouseRightButton then
+            onReadOnlyMouseClick(mousePos)
+            return true
+        end
+    end
     consoleTabBar:setDropTarget(readOnlyButton, function(target, draggedWidget)
         activateReadOnlyMode(draggedWidget:getText())
     end)
@@ -733,6 +732,10 @@ function onTabChange(tabBar, tab)
 end
 
 function clear()
+    -- the feed on the second pane goes back to the bar (or closes, if the pane opened it) before channels are saved
+    if readOnlyModeEnabled then
+        closeSecondPane()
+    end
     -- save last open channels
     local lastChannelsOpen = g_settings.getNode('lastChannelsOpen') or {}
     local char = g_game.getCharacterName()
@@ -1587,7 +1590,7 @@ function processChannelTabMenu(tab, mousePos, mouseButton)
             clearReadOnlyTab()
             toggleReadOnlyMode()
         end)
-    else
+    elseif isPaneFeed(channelName) then
         menu:addOption(tr("Open read-only"), function()
             activateReadOnlyMode(channelName)
         end)
@@ -2493,21 +2496,6 @@ function consoleController:onGameStart()
           }
         }, gameRootPanel)
     end
-    if clientVersion > 1100 then
-        local active = g_game.canExivaOptions()
-        local widget = consolePanel:getChildById('exivaOption')
-        if widget then
-            widget:setTooltip(
-                active
-                    and "Select Characters that can Exiva you"
-                    or "Exiva Options are only available on Optional Pvp game worlds"
-            )
-            widget:setOn(active)
-        end
-    else
-        consolePanel:getChildById('exivaOption'):disable()
-    end
-
     -- Update chat mode when game comes online to ensure proper key binding
     updateChatMode()
 
@@ -2654,23 +2642,32 @@ function returnChat()
     gameBottomPanel:setPhantom(false)
 end
 
+-- the splitter that sets the chat height stays over the map in the extended view: it goes with the chat, or a bare
+-- bar would float where the chat was
+local function setChatSplitterVisible(visible)
+    local splitter = modules.game_interface.getBottomSplitter()
+    if splitter then
+        splitter:setVisible(visible)
+    end
+end
+
 function extendedViewHide(bool)
     if bool then
         gameBottomPanel:hide()
+        setChatSplitterVisible(false)
         createButtonChat()
-        extendedViewCanSee(extendedViewButtonShowAlphaChat:isOn())
     else
         consolePanel:getChildById('extendedViewHide'):setChecked(false)
         gameBottomPanel:show(true)
+        setChatSplitterVisible(true)
         extendedViewCanSee(false)
         returnChat()
-        if extendedViewButtonShowAlphaChat then
-            extendedViewButtonShowAlphaChat:setOn(false)
-        end
         destroyButtonChat()
     end
 end
 
+-- one button on the map while the chat is hidden: it brings the chat back (the transparent "messages over the map"
+-- mode and its second button were removed)
 function createButtonChat()
     if extendedViewButtonToggleChat then
         return
@@ -2690,6 +2687,7 @@ function createButtonChat()
         extendedViewButtonToggleChat:setSize("60 60")
     else
         extendedViewButtonToggleChat:setIcon("/images/game/npcicons/icon_chat")
+        extendedViewButtonToggleChat:setTooltip(tr('Show the chat (Enter)'))
         extendedViewButtonToggleChat:setMarginBottom(10)
         extendedViewButtonToggleChat:setSize("30 23")
         extendedViewButtonToggleChat:addAnchor(AnchorLeft, "parent", AnchorLeft)
@@ -2702,27 +2700,6 @@ function createButtonChat()
             extendedViewHide(true)
         end
     end
-    extendedViewButtonShowAlphaChat = g_ui.createWidget(stringNameMobileOrPc, mapPanel)
-    extendedViewButtonShowAlphaChat:setIcon("/images/game/npcicons/icon_chat")
-    extendedViewButtonShowAlphaChat:addAnchor(AnchorBottom, "parent", AnchorBottom)
-    if g_platform.isMobile() then
-        extendedViewButtonShowAlphaChat:setMarginBottom(hightMobileWidget)
-        extendedViewButtonShowAlphaChat:setSize("60 60")
-        extendedViewButtonShowAlphaChat:addAnchor(AnchorRight, "test", AnchorLeft)
-    else
-        extendedViewButtonShowAlphaChat:setSize("30 23")
-        extendedViewButtonShowAlphaChat:addAnchor(AnchorLeft, "test", AnchorRight)
-        extendedViewButtonShowAlphaChat:setMarginBottom(10)
-    end
-    extendedViewButtonShowAlphaChat:setMarginLeft(5)
-    extendedViewButtonShowAlphaChat.onClick = function(a, b)
-        if extendedViewButtonShowAlphaChat:isOn() then
-            extendedViewButtonShowAlphaChat:setOn(false)
-        else
-            extendedViewButtonShowAlphaChat:setOn(true)
-        end
-        extendedViewCanSee(extendedViewButtonShowAlphaChat:isOn())
-    end
 end
 
 function destroyButtonChat()
@@ -2730,20 +2707,19 @@ function destroyButtonChat()
         extendedViewButtonToggleChat:destroy()
         extendedViewButtonToggleChat = nil
     end
-    if extendedViewButtonShowAlphaChat and not extendedViewButtonShowAlphaChat:isDestroyed() then
-        extendedViewButtonShowAlphaChat:destroy()
-        extendedViewButtonShowAlphaChat = nil
-    end
+end
+
+function isPaneFeed(channelName)
+    return channelName == tr('Server Log') or channelName == tr('Loot')
 end
 
 function activateReadOnlyMode(channelName)
-    activeactiveReadOnlyTabName = channelName
-    readOnlyButton:setText(activeactiveReadOnlyTabName)
-    if activeactiveReadOnlyTabName:len() > 13 then
-        readOnlyButton:setWidth(readOnlyButton:getTextSize().width + 10)
-    else
-        readOnlyButton:setWidth(readOnlyButton.tabWidth)
+    -- whatever asks (the + menu, dragging a tab, a tab's menu), only the server log and the loot go to the right
+    if not isPaneFeed(channelName) then
+        return
     end
+    activeactiveReadOnlyTabName = channelName
+    setPaneButton(channelName)
     copyMessagesToReadOnlyPanel(channelName)
     local tab = consoleTabBar:getTab(channelName)
     if tab then
@@ -2765,29 +2741,75 @@ function activateReadOnlyMode(channelName)
     end
 end
 
-function onReadOnlyMouseClick()
+-- the "+" over the right pane: closed, it lists the channels to open there; open, it shows the channel's name and
+-- the menu switches the channel or closes the pane (the left pane always stays)
+function setPaneButton(channelName)
+    if channelName and channelName ~= '' then
+        readOnlyButton:setText(channelName)
+        readOnlyButton:setWidth(readOnlyButton:getTextSize().width + 12)
+        readOnlyButton:setTooltip(tr('Second chat: click to switch the channel or close it'))
+    else
+        readOnlyButton:setText('+')
+        readOnlyButton:setWidth(16)
+        readOnlyButton:setTooltip(tr('Open a second chat beside this one'))
+    end
+end
+
+-- the second pane only shows the feeds nobody types in: the server log and the loot. Opened from the "+", the feed
+-- leaves the left tab bar while it is on the right (a closed loot tab is created hidden: messages only reach a tab);
+-- closing or switching the pane puts it back, or closes it if the pane opened it
+local function paneFeeds()
+    return {
+        { name = tr('Server Log'), open = function() return addTab(tr('Server Log'), false) end },
+        { name = tr('Loot'), open = function()
+            channels[LOOT_CHANNEL_ID] = tr('Loot')
+            local tab = addTab(tr('Loot'), false)
+            tab.channelId = LOOT_CHANNEL_ID
+            return tab
+        end }
+    }
+end
+
+local function releasePaneTab(tab)
+    if not tab then
+        return
+    end
+    if tab.paneOnly then
+        tab.paneOnly = nil
+        removeTab(tab)
+    elseif consoleTabBar:isTabHidden(tab) then
+        consoleTabBar:showTab(tab)
+    end
+end
+
+function closeSecondPane()
+    local tab = consoleTabBar:getTab(activeactiveReadOnlyTabName)
+    clearReadOnlyTab()
+    toggleReadOnlyMode()
+    releasePaneTab(tab)
+end
+
+function onReadOnlyMouseClick(mousePos)
     local contextMenu = g_ui.createWidget("PopupMenu")
     contextMenu:setGameMenu(true)
-    if readOnlyModeEnabled and activeactiveReadOnlyTabName ~= "" then
-        local sourceTab = consoleTabBar:getTab(activeactiveReadOnlyTabName)
-        if sourceTab then
-            addClonedMenuOptions(sourceTab, contextMenu, {
-                readonly = true,
-                close = true
-            })
-            contextMenu:addSeparator()
-        end
-        contextMenu:addOption(tr("Close Read-Only Tab"), function()
-            clearReadOnlyTab()
-            toggleReadOnlyMode()
-        end)
-    else
-        for _, tab in pairs(consoleTabBar.tabs) do
-            local tabName = tab:getText()
-            contextMenu:addOption(tr("Show " .. tabName), function()
-                activateReadOnlyMode(tabName)
+    for _, feed in ipairs(paneFeeds()) do
+        if feed.name ~= activeactiveReadOnlyTabName then
+            contextMenu:addOption(tr('Show %s', feed.name), function()
+                local previous = consoleTabBar:getTab(activeactiveReadOnlyTabName)
+                local tab = consoleTabBar:getTab(feed.name)
+                if not tab then
+                    tab = feed.open()
+                    tab.paneOnly = true
+                end
+                consoleTabBar:hideTab(tab)
+                activateReadOnlyMode(feed.name)
+                releasePaneTab(previous)
             end)
         end
+    end
+    if readOnlyModeEnabled and activeactiveReadOnlyTabName ~= "" then
+        contextMenu:addSeparator()
+        contextMenu:addOption(tr("Close second chat"), closeSecondPane)
     end
     contextMenu:display(mousePos)
 end
@@ -2837,8 +2859,8 @@ function clearReadOnlyTab()
             child = nil
         end
     end
-    readOnlyButton:setIcon("")
     activeactiveReadOnlyTabName = ""
+    setPaneButton(nil)
 end
 
 function toggleReadOnlyMode()
@@ -2846,11 +2868,8 @@ function toggleReadOnlyMode()
         consoleContentPanel:removeAnchor(AnchorRight)
         consoleContentPanel:addAnchor(AnchorRight, "parent", AnchorRight)
         readOnlyPanel:hide()
-        readOnlyButton:setText("")
-        readOnlyButton:setIcon("/images/game/console/readOnly")
-        readOnlyButton:setImageSource("")
         activeactiveReadOnlyTabName = ""
-        readOnlyButton:setWidth(readOnlyButton.tabWidth)
+        setPaneButton(nil)
     else
         consoleContentPanel:removeAnchor(AnchorRight)
         consoleContentPanel:addAnchor(AnchorRight, "parent", AnchorHorizontalCenter)
@@ -2859,9 +2878,6 @@ function toggleReadOnlyMode()
         readOnlyPanel:removeAnchor(AnchorRight)
         readOnlyPanel:addAnchor(AnchorLeft, "parent", AnchorHorizontalCenter)
         readOnlyPanel:addAnchor(AnchorRight, "parent", AnchorRight)
-        readOnlyButton:removeAnchor(AnchorLeft)
-        readOnlyButton:setIcon("")
-        readOnlyButton:setImageSource("/images/ui/console_button")
     end
     readOnlyModeEnabled = not readOnlyModeEnabled
 end
@@ -2883,7 +2899,7 @@ function addClonedMenuOptions(sourceTab, targetMenu, excludedOptions)
                 clearReadOnlyTab()
                 toggleReadOnlyMode()
             end)
-        else
+        elseif isPaneFeed(currentChannelName) then
             targetMenu:addOption(tr("Open read-only"), function()
                 activateReadOnlyMode(currentChannelName)
             end)

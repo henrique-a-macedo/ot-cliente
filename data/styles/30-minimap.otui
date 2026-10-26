@@ -54,12 +54,15 @@ MinimapZoomOutButton < Button
   anchors.bottom: parent.bottom
   //icon-source: /images/game/minimap/zoom_out
 
+// third column of the bottom-right button block, next to floor up/down and zoom
 MinimapResetButton < Button
-  !text: tr('Center')
-  size: 44 20
-  anchors.left: parent.left
-  anchors.top: parent.top
-  margin: 4
+  size: 20 20
+  margin-right: 52
+  margin-bottom: 4
+  anchors.right: parent.right
+  anchors.bottom: parent.bottom
+  icon-source: /images/game/minimap/cross
+  !tooltip: tr('Center on your character')
 
 Minimap < UIMinimap
   draggable: true

@@ -7,8 +7,8 @@ UIWidget
     anchors.right: parent.right
     anchors.top: parent.top
 
-    height: 60
-  
+    height: 30
+
     OptionCheckBox
       id: enableLights
       !text: tr('Enable lights')
@@ -23,47 +23,7 @@ UIWidget
         local value = modules.client_options.getOption('ambientLight')
         self:setText(string.format('Ambient light: %s%%', value))
 
-    OptionScaleScroll
-      id: shadowFloorIntensity
-      anchors.top: prev.bottom
-      &minimumScrollValue: 0
-      &maximumScrollValue: 100
-      &scrollSize: 21
-      @onSetup: |
-        local value = modules.client_options.getOption('shadowFloorIntensity')
-        self:setText(string.format('Floor Shadowing Intensity: %s%%', value))
-
-    OptionScaleScroll
-      id: floorFading
-      anchors.top: prev.bottom
-      &minimumScrollValue: 0
-      &maximumScrollValue: 1000
-      &scrollSize: 21
-      @onSetup: |
-        local value = modules.client_options.getOption('floorFading')
-        self:setText(tr('Floor Fading: %s ms', value))
-
-  SmallReversedQtPanel
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: prev.bottom
-    margin-top: 7
-    height: 32
-  
-    Label
-      !text: 'Floor View Mode:'
-      anchors.left: parent.left
-      margin-left: 18
-      color: #c0c0c0ff
-      anchors.verticalCenter: parent.verticalCenter
-
-    QtComboBox
-      id: floorViewMode
-      width: 180
-      margin-left: 10
-      anchors.verticalCenter: prev.verticalCenter
-      anchors.left: prev.right
-      mouse-scroll: false
+  // floor shadowing, floor fading and floor view mode were removed (the map always uses the normal floor view)
 
   SmallReversedQtPanel
     anchors.left: parent.left

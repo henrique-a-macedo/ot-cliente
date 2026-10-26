@@ -1,0 +1,8 @@
+Module
+  name: game_pouch
+  description: Currency pouch window: stones kept outside the inventory, withdraw as items (server opcode 124)
+  author: henrique
+  sandboxed: true
+  scripts: [ pouch ]
+  @onLoad: init()
+  @onUnload: terminate()

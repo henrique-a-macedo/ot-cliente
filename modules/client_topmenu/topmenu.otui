@@ -42,6 +42,19 @@ TopMenuPanel
   image-source: /images/ui/top_bar_login
   image-border: 5
 
+  // in game (extended view) the bar becomes a floating box: this grip is where the player drags it
+  UIWidget
+    id: floatingGrip
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    anchors.left: parent.left
+    width: 10
+    margin: 6 0 6 3
+    image-source: /images/ui/miniwindow_header
+    image-border: 2
+    phantom: true
+    visible: false
+
   TopMenuButtonsPanel
     id: topLeftTogglesPanel
     anchors.top: parent.top

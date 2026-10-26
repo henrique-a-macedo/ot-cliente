@@ -97,11 +97,6 @@ function setSidePanelVisible(panel, visible)
 
     updateSidePanelButtons()
 
-    if modules.game_actionbar and modules.game_actionbar.updateVisibleWidgetsExternal then
-        addEvent(function()
-            modules.game_actionbar.updateVisibleWidgetsExternal()
-        end)
-    end
 end
 
 -- Called by client_options once every persisted option has been applied, so the
@@ -520,12 +515,6 @@ function updateStretchShrink()
 
         -- Set gameMapPanel size to height = 11 * 32 + 2
         bottomSplitter:setMarginBottom(bottomSplitter:getMarginBottom() + (gameMapPanel:getHeight() - 32 * 11) - 10)
-    end
-    -- Update action bar layout when window geometry changes
-    if modules.game_actionbar and modules.game_actionbar.updateVisibleWidgetsExternal then
-        addEvent(function()
-            modules.game_actionbar.updateVisibleWidgetsExternal()
-        end)
     end
 end
 

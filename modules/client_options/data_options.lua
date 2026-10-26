@@ -272,12 +272,6 @@ return {
             end
         end
     },
-    displayHarmony                     = {
-        value = true,
-        action = function(value, options, controller, panels, extraWidgets)
-            panels.gameMapPanel:setDrawHarmony(value)
-        end
-    },
     displayText                       = {
         value = true,
         action = function(value, options, controller, panels, extraWidgets)
@@ -378,15 +372,9 @@ return {
             panels.graphicsPanel:recursiveGetChildById('antialiasingMode'):setCurrentOptionByData(value, true)
         end
     },
-    shadowFloorIntensity              = {
-        value = 30,
-        action = function(value, options, controller, panels, extraWidgets)
-            panels.graphicsEffectsPanel:recursiveGetChildById('shadowFloorIntensity'):setText(string.format(
-                'Shadow floor Intensity: %s%%', value))
-            panels.gameMapPanel:setShadowFloorIntensity(1 - (value / 100))
-        end
-    },
-    optimizeFps                       = {
+    -- shadowFloorIntensity, floorViewMode and floorFading were removed: the map keeps the C++ defaults
+    -- (normal floor view, no fade, no black shadow over the floor below)
+    optimizeFps                      = {
         value = true,
         action = function(value, options, controller, panels, extraWidgets)
             g_app.optimize(value)
@@ -404,24 +392,6 @@ return {
             g_app.setDrawEffectOnTop(value)
         end
     },
-    floorViewMode                     = {
-        value = 1,
-        action = function(value, options, controller, panels, extraWidgets)
-            panels.gameMapPanel:setFloorViewMode(value)
-            panels.graphicsEffectsPanel:recursiveGetChildById('floorViewMode'):setCurrentOptionByData(value, true)
-
-            local fadeMode = value == 1
-            panels.graphicsEffectsPanel:recursiveGetChildById('floorFading'):setEnabled(fadeMode)
-        end
-    },
-    floorFading                       = {
-        value = 500,
-        action = function(value, options, controller, panels, extraWidgets)
-            panels.graphicsEffectsPanel:recursiveGetChildById('floorFading'):setText(string.format('Floor Fading: %s ms',
-                value))
-            panels.gameMapPanel:setFloorFading(tonumber(value))
-        end
-    },
     asyncTxtLoading                   = {
         value = false,
         action = function(value, options, controller, panels, extraWidgets)
@@ -435,64 +405,6 @@ return {
             end
 
             g_app.setLoadingAsyncTexture(value)
-        end
-    },
-    hudScale                          = {
-        event = nil,
-        value = g_platform.isMobile() and 2 or 0,
-        action = function(value, options, controller, panels, extraWidgets)
-            value = value / 2
-
-            if options.hudScale.event ~= nil then
-                removeEvent(options.hudScale.event)
-            end
-
-            options.hudScale.event = scheduleEvent(function()
-                g_app.setHUDScale(math.max(value + 0.5, 1))
-                options.hudScale.event = nil
-            end, 250)
-
-            local hudWidget = panels.interfaceHUD:recursiveGetChildById('hudScale')
-            hudWidget:setText(string.format('HUD Scale: %sx', math.max(value + 0.5, 1)))
-        end
-    },
-    creatureInformationScale          = {
-        value = g_platform.isMobile() and 2 or 0,
-        action = function(value, options, controller, panels, extraWidgets)
-            if value == 0 then
-                value = g_window.getDisplayDensity() - 0.5
-            else
-                value = value / 2
-            end
-            g_app.setCreatureInformationScale(math.max(value + 0.5, 1))
-            panels.interfaceHUD:recursiveGetChildById('creatureInformationScale'):setText(string.format(
-                'Creature Information Scale: %sx', math.max(value + 0.5, 1)))
-        end
-    },
-    staticTextScale                   = {
-        value = g_platform.isMobile() and 2 or 0,
-        action = function(value, options, controller, panels, extraWidgets)
-            if value == 0 then
-                value = g_window.getDisplayDensity() - 0.5
-            else
-                value = value / 2
-            end
-            g_app.setStaticTextScale(math.max(value + 0.5, 1))
-            panels.interfaceHUD:recursiveGetChildById('staticTextScale'):setText(string.format('Message Scale: %sx',
-                math.max(value + 0.5, 1)))
-        end
-    },
-    animatedTextScale                 = {
-        value = g_platform.isMobile() and 2 or 0,
-        action = function(value, options, controller, panels, extraWidgets)
-            if value == 0 then
-                value = g_window.getDisplayDensity() - 0.5
-            else
-                value = value / 2
-            end
-            g_app.setAnimatedTextScale(math.max(value + 0.5, 1))
-            panels.interfaceHUD:recursiveGetChildById('animatedTextScale'):setText(
-                tr('Animated Message Scale: %sx', math.max(value + 0.5, 1)))
         end
     },
     -- The side panel options are the single source of truth for the left/right
@@ -578,9 +490,6 @@ return {
             end
         end
     },
-    profile                           = {
-        value = 1,
-    },
     rightJoystick                     = {
         value = false,
         action = function(value, options, controller, panels, extraWidgets)
@@ -647,12 +556,6 @@ return {
                 modules.game_containers.reloadContainers()
                 options.framesRarity.event = nil
             end, 100)
-        end
-    },
-    autoSwitchPreset                  = false,
-    listKeybindsPanel                 = {
-        action = function(value, options, controller, panels, extraWidgets)
-            listKeybindsComboBox(value)
         end
     },
     -- Sound routing is handled by C++ SoundManager (protocol + filters).
@@ -975,172 +878,6 @@ return {
             end
         end
     },
-    graphicalCooldown = {
-        value = true,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            modules.game_actionbar.toggleCooldownOption()
-        end,
-    },
-    cooldownSecond = {
-        value = true,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            modules.game_actionbar.toggleCooldownOption()
-        end,
-    },
-    actionBarShowBottom1 = {
-        value = true,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar13") or false
-            modules.game_actionbar.configureActionBar('actionBarShowBottom1', allBox and value)
-        end,
-    },
-    actionBarShowBottom2 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar13") or false
-            modules.game_actionbar.configureActionBar('actionBarShowBottom2', allBox and value)
-        end,
-    },
-    actionBarShowBottom3 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar13") or false
-            modules.game_actionbar.configureActionBar('actionBarShowBottom3', allBox and value)
-        end,
-    },
-    actionBarShowLeft1 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar46") or false
-            modules.game_actionbar.configureActionBar('actionBarShowLeft1', allBox and value)
-        end,
-    },
-    actionBarShowLeft2 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar46") or false
-            modules.game_actionbar.configureActionBar('actionBarShowLeft2', allBox and value)
-        end,
-    },
-    actionBarShowLeft3 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar46") or false
-            modules.game_actionbar.configureActionBar('actionBarShowLeft3', allBox and value)
-        end,
-    },
-    actionBarShowRight1 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar79") or false
-            modules.game_actionbar.configureActionBar('actionBarShowRight1', allBox and value)
-            return true
-        end,
-    },
-    actionBarShowRight2 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar79") or false
-            modules.game_actionbar.configureActionBar('actionBarShowRight2', allBox and value)
-        end,
-    },
-    actionBarShowRight3 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local allBox = modules.client_options.getOption("allActionBar79") or false
-            modules.game_actionbar.configureActionBar('actionBarShowRight3', allBox and value)
-        end,
-    },
-    allActionBar46 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local huds = {"actionBarShowLeft1", "actionBarShowLeft2", "actionBarShowLeft3"}
-            for _, actionBar in pairs(huds) do
-                local hud =  panels.actionbars:recursiveGetChildById(actionBar)
-                if value then
-                    hud:enable()
-                else
-                    hud:disable()
-                end
-                modules.game_actionbar.configureActionBar(actionBar, (value and hud:isChecked()))
-            end
-        end,
-    },
-    allActionBar13 = {
-        value = true,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local huds = {"actionBarShowBottom1", "actionBarShowBottom2", "actionBarShowBottom3"}
-            for _, actionBar in pairs(huds) do
-                local hud =  panels.actionbars:recursiveGetChildById(actionBar)
-                if value then
-                    hud:enable()
-                else
-                    hud:disable()
-                end
-                modules.game_actionbar.configureActionBar(actionBar, (value and hud:isChecked()))
-            end
-        end,
-    },
-    allActionBar79 = {
-        value = false,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            local huds = {"actionBarShowRight1", "actionBarShowRight2", "actionBarShowRight3"}
-            for _, actionBar in pairs(huds) do
-                local hud = panels.actionbars:recursiveGetChildById(actionBar)
-                if value then
-                    hud:enable()
-                else
-                    hud:disable()
-                end
-                modules.game_actionbar.configureActionBar(actionBar, (value and hud:isChecked()))
-            end
-        end,
-    },
-    actionTooltip = {
-        value = true,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            modules.game_actionbar.updateVisibleOptions('tooltip', value)
-        end,
-    },
-    showSpellParameters = {
-        value = true,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            modules.game_actionbar.updateVisibleOptions('parameter', value)
-        end,
-    },
-    showHKObjectsBars = {
-        value = true,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            modules.game_actionbar.updateVisibleOptions('amount', value)
-        end,
-    },
-    showAssignedHKButton = {
-        value = true,
-        action = function(value)
-            if not modules.game_actionbar then return end
-            modules.game_actionbar.updateVisibleOptions('hotkey', value)
-        end,
-    },
-    actionBarBottomLocked = false,
-    actionBarLeftLocked = false,
-    actionBarRightLocked = false,
     setOwnSpellEffectAlphaScroll = {
         value = 100,
         action = function(value, options, controller, panels, extraWidgets)

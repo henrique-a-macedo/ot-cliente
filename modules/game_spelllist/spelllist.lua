@@ -19,7 +19,6 @@ vocationBoxSorcerer = nil
 vocationBoxDruid = nil
 vocationBoxPaladin = nil
 vocationBoxKnight = nil
-vocationBoxMonk = nil
 
 groupBoxAny = nil
 groupBoxAttack = nil
@@ -44,7 +43,6 @@ FILTER_VOCATION_SORCERER = 1
 FILTER_VOCATION_DRUID = 2
 FILTER_VOCATION_PALADIN = 3
 FILTER_VOCATION_KNIGHT = 4
-FILTER_VOCATION_MONK = 5
 
 FILTER_GROUP_ANY = 0
 FILTER_GROUP_ATTACK = 1
@@ -123,7 +121,6 @@ function init()
     vocationBoxDruid = spelllistWindow:getChildById('vocationBoxDruid')
     vocationBoxPaladin = spelllistWindow:getChildById('vocationBoxPaladin')
     vocationBoxKnight = spelllistWindow:getChildById('vocationBoxKnight')
-    vocationBoxMonk = spelllistWindow:getChildById('vocationBoxMonk')
 
     groupBoxAny = spelllistWindow:getChildById('groupBoxAny')
     groupBoxAttack = spelllistWindow:getChildById('groupBoxAttack')
@@ -140,7 +137,6 @@ function init()
     vocationRadioGroup:addWidget(vocationBoxDruid)
     vocationRadioGroup:addWidget(vocationBoxPaladin)
     vocationRadioGroup:addWidget(vocationBoxKnight)
-    vocationRadioGroup:addWidget(vocationBoxMonk)
 
     groupRadioGroup = UIRadioGroup.create()
     groupRadioGroup:addWidget(groupBoxAny)
@@ -262,9 +258,6 @@ local function vocationMatches(vocations, filterId)
     if filterId == FILTER_VOCATION_ANY then
         return true
     end
-    if filterId == FILTER_VOCATION_MONK then
-        return table.find(vocations, VocationsServer.Monk) or table.find(vocations, VocationsServer.ExaltedMonk)
-    end
     return table.find(vocations, filterId) or table.find(vocations, filterId + 4)
 end
 
@@ -354,8 +347,6 @@ function selectDefaultVocation()
         widget= vocationBoxSorcerer
     elseif vocation == VocationsClient.Druid or vocation == VocationsClient.ElderDruid then
         widget = vocationBoxDruid
-    elseif vocation == VocationsClient.Monk or vocation == VocationsClient.ExaltedMonk then
-        widget = vocationBoxMonk
     end
     vocationRadioGroup:selectWidget(widget)
 end
@@ -386,8 +377,6 @@ function toggleFilter(widget, selectedWidget)
             filters.vocationId = FILTER_VOCATION_PALADIN
         elseif boxId == 'vocationBoxKnight' then
             filters.vocationId = FILTER_VOCATION_KNIGHT
-        elseif boxId == 'vocationBoxMonk' then
-            filters.vocationId = FILTER_VOCATION_MONK
         end
     elseif widget == groupRadioGroup then
         local boxId = selectedWidget:getId()

@@ -1,0 +1,60 @@
+// one floating bar (buffs or debuffs): squares in a row, each with the time left below it
+BuffBar < UIWidget
+  height: 46
+  padding: 3
+  background-color: #1a1a1acc
+  border-width: 1
+  border-color: #3a3a3a
+  focusable: false
+  layout:
+    type: horizontalBox
+    spacing: 3
+    fit-children: true
+
+BuffSquare < UIWidget
+  size: 32 40
+  phantom: false
+
+  UIWidget
+    id: frame
+    anchors.top: parent.top
+    anchors.left: parent.left
+    size: 32 32
+    background-color: #000000aa
+    border-width: 1
+    phantom: true
+
+  UIWidget
+    id: icon
+    anchors.centerIn: frame
+    size: 32 32
+    phantom: true
+
+  UIItem
+    id: item
+    anchors.centerIn: frame
+    size: 32 32
+    virtual: true
+    visible: false
+    phantom: true
+
+  Label
+    id: initials
+    anchors.centerIn: frame
+    font: verdana-11px-rounded
+    color: #dfdfdf
+    text-auto-resize: true
+    visible: false
+    phantom: true
+
+  Label
+    id: time
+    anchors.top: frame.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 8
+    font: small-9px
+    color: #dfdfdf
+    text-align: center
+    background-color: #000000cc
+    phantom: true

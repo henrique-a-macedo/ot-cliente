@@ -5,9 +5,9 @@ ReforgeRow < Label
   focusable: true
   color: #cccccc
   background-color: alpha
+  // focus only highlights the row: the line keeps its color (prefix, suffix, locked)
   $focus:
     background-color: #ffffff22
-    color: #ffffff
 
 ReforgeTitle < Label
   font: verdana-11px-antialised

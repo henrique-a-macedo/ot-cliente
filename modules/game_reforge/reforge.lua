@@ -1,11 +1,13 @@
 -- Reforge window: drop an item on the slot, pick a stone, apply. Talks to the server on extended opcode 121
--- (forgottenserver data/scripts/creaturescripts/player/reforge.lua).
+-- (forgottenserver data/scripts/creaturescripts/player/reforge.lua). The item really moves into the window (the
+-- server keeps it on a bench saved with the character) and goes back to the bags when the window closes.
 
 local OPCODE = 121
 
 local RESULT_COLORS = { ok = '#7fd77f', failed = '#e0a050', error = '#e06060' }
 local RARITY_COLORS = { Common = '#b0b0b0', Uncommon = '#5ac85a', Rare = '#4a9cf0', Legendary = '#f08c28' }
 local LINE_COLORS = { prefix = '#8fc4ff', suffix = '#c8a8ff', locked = '#e8c860' }
+local CHANGED_BACKGROUND = '#3c8d3c55' -- lines that a stone just added or changed
 
 reforgeWindow = nil
 local reforgeButton = nil
@@ -14,7 +16,8 @@ local state = {
     item = nil,          -- item data from the server
     stones = {},         -- stones the player carries
     stoneKey = nil,      -- "<type>:<category>" of the selected stone
-    lineIndex = nil      -- selected line (for stones that remove a chosen line)
+    lineIndex = nil,     -- selected line (for stones that remove a chosen line)
+    previousLines = nil  -- line texts before the last stone, to show what it changed
 }
 
 local function send(text)
@@ -72,6 +75,11 @@ local function renderLines()
         return
     end
 
+    local before = {}
+    for _, text in ipairs(state.previousLines or {}) do
+        before[text] = true
+    end
+
     local lastAffix = nil
     for _, line in ipairs(item.lines) do
         -- the server sends prefixes first, then suffixes
@@ -85,6 +93,10 @@ local function renderLines()
         local row = g_ui.createWidget('ReforgeRow', list)
         row:setText('  ' .. line.text .. (line.locked and '  [locked]' or ''))
         row:setColor(line.locked and LINE_COLORS.locked or LINE_COLORS[line.affix])
+        if state.previousLines and not before[line.text] then
+            row:setBackgroundColor(CHANGED_BACKGROUND)
+            row:setTooltip(tr('Changed by the last stone'))
+        end
         local index = line.index
         row.onFocusChange = function(_, focused)
             if focused then
@@ -166,6 +178,12 @@ local function onMessage(protocol, opcode, data)
         end
         renderItem()
         renderLines()
+    elseif data.action == 'empty' then
+        state.item = nil
+        state.lineIndex = nil
+        state.previousLines = nil
+        renderItem()
+        renderLines()
     elseif data.action == 'result' then
         setResult(data.status, data.message)
         return
@@ -185,7 +203,7 @@ local function onSlotDrop(self, widget, mousePos)
         return true
     end
     state.lineIndex = nil
-    self:setItem(Item.create(item:getId()))
+    state.previousLines = nil
     setResult(nil, '')
     send(string.format('select:%d:%d:%d', position.x, position.y, position.z))
     return true
@@ -213,6 +231,11 @@ function apply()
         extra = tostring(state.lineIndex)
     end
 
+    -- remember the lines so the answer can show what the stone changed
+    state.previousLines = {}
+    for _, line in ipairs(state.item.lines) do
+        table.insert(state.previousLines, line.text)
+    end
     send(string.format('apply:%s:%s:%s', stone.type, stone.category ~= '' and stone.category or '-', extra))
 end
 
@@ -223,6 +246,13 @@ end
 function hide()
     if reforgeWindow then
         reforgeWindow:hide()
+    end
+    -- closing the window gives the item back
+    if state.item then
+        send('take')
+        state.item = nil
+        state.previousLines = nil
+        renderItem()
     end
 end
 
@@ -249,6 +279,7 @@ local function reset()
     state.stones = {}
     state.stoneKey = nil
     state.lineIndex = nil
+    state.previousLines = nil
     if reforgeWindow then
         reforgeWindow:hide()
         renderItem()
