@@ -134,11 +134,16 @@ local function onMessage(protocol, opcode, data)
         return
     end
     if data.action == 'list' then
-        quests, questOrder = {}, {}
+        -- the list comes in parts (the server limits a message to 8 KB): the first starts over, the last redraws
+        if data.first ~= false then
+            quests, questOrder = {}, {}
+        end
         for _, view in ipairs(data.quests or {}) do
             store(view)
         end
-        changed(nil)
+        if data.last ~= false then
+            changed(nil)
+        end
     elseif data.action == 'update' and type(data.quest) == 'table' then
         local view = data.quest
         local before = quests[view.id]
