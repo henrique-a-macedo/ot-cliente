@@ -1,0 +1,192 @@
+-- Quest tracker (server opcode 126, forgottenserver data/scripts/creaturescripts/player/quest_tracker.lua; design in
+-- arch .claude/ref/design/quest-tracker.md). The server sends the quests ("list" when asked with "open", "update"
+-- when one changes); this module keeps them and which ones are tracked, per character. A view says what to do, never
+-- how: a hidden objective comes without its label. Collect objectives are counted here from the backpack so the
+-- number moves live; the server checks the real count at the hand-in.
+local OPCODE = 126
+local TRACKED_NODE = 'QuestTrackerTracked'
+-- the server answers the first "open" only after it sent opcode 0 at login
+local OPEN_DELAY = 1500
+
+quests = {}       -- id -> view from the server
+questOrder = {}   -- ids in the server's order
+local changeListeners = {}
+local settings = nil -- { tracked = { [id] = true }, autoTrack = bool } of the logged character
+local countEvent = nil
+
+local function characterSettings()
+    local all = g_settings.getNode(TRACKED_NODE) or {}
+    local own = all[g_game.getCharacterName()] or {}
+    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false }
+end
+
+local function saveSettings()
+    local all = g_settings.getNode(TRACKED_NODE) or {}
+    all[g_game.getCharacterName()] = settings
+    g_settings.setNode(TRACKED_NODE, all)
+end
+
+-- callbacks function(id) (id nil: everything changed)
+function onChange(callback)
+    changeListeners[#changeListeners + 1] = callback
+end
+
+local function changed(id)
+    for _, callback in ipairs(changeListeners) do
+        callback(id)
+    end
+end
+
+function isTracked(id)
+    return settings ~= nil and settings.tracked[id] == true
+end
+
+function setTracked(id, on)
+    if not settings then
+        return
+    end
+    settings.tracked[id] = on and true or nil
+    saveSettings()
+    changed(id)
+end
+
+function isAutoTrack()
+    return settings == nil or settings.autoTrack
+end
+
+function setAutoTrack(on)
+    if settings then
+        settings.autoTrack = on
+        saveSettings()
+    end
+end
+
+function requestList()
+    local protocol = g_game.getProtocolGame()
+    if protocol then
+        protocol:sendExtendedOpcode(OPCODE, 'open')
+    end
+end
+
+-- items of an id in the inventory and the open containers (client ids, as the server sends them)
+local function countItem(itemId)
+    local player = g_game.getLocalPlayer()
+    local total = 0
+    if player then
+        for slot = InventorySlotFirst, InventorySlotLast do
+            local item = player:getInventoryItem(slot)
+            if item and item:getId() == itemId then
+                total = total + item:getCount()
+            end
+        end
+    end
+    for _, container in pairs(g_game.getContainers()) do
+        for _, item in pairs(container:getItems()) do
+            if item:getId() == itemId then
+                total = total + item:getCount()
+            end
+        end
+    end
+    return total
+end
+
+-- collect objectives: the live count (capped at the target); others as the server sent them
+function objectiveCount(objective)
+    if objective.item then
+        return math.min(countItem(objective.item), objective.target), objective.target
+    end
+    return objective.current, objective.target
+end
+
+local function hasCollect(view)
+    for _, objective in ipairs(view.stage and view.stage.objectives or {}) do
+        if objective.item then
+            return true
+        end
+    end
+    return false
+end
+
+-- the backpack changed: tracked quests with a collect objective redraw (once per burst of changes)
+local function recount()
+    if countEvent then
+        return
+    end
+    countEvent = scheduleEvent(function()
+        countEvent = nil
+        for id, view in pairs(quests) do
+            if isTracked(id) and hasCollect(view) then
+                changed(id)
+            end
+        end
+    end, 200)
+end
+
+local function store(view)
+    if not quests[view.id] then
+        questOrder[#questOrder + 1] = view.id
+    end
+    quests[view.id] = view
+end
+
+local function onMessage(protocol, opcode, data)
+    if type(data) ~= 'table' or not settings then
+        return
+    end
+    if data.action == 'list' then
+        quests, questOrder = {}, {}
+        for _, view in ipairs(data.quests or {}) do
+            store(view)
+        end
+        changed(nil)
+    elseif data.action == 'update' and type(data.quest) == 'table' then
+        local view = data.quest
+        local before = quests[view.id]
+        store(view)
+        -- a quest that has just started is tracked by default (option "Track new quests")
+        if view.state == 'active' and (not before or before.state ~= 'active') and settings.autoTrack then
+            settings.tracked[view.id] = true
+            saveSettings()
+        end
+        signalcall(onQuestUpdate, before, view)
+        changed(view.id)
+    end
+end
+
+-- set by the mini window: (before, after) of an update, for the "Quest updated" message
+onQuestUpdate = nil
+
+local function onGameStart()
+    settings = characterSettings()
+    quests, questOrder = {}, {}
+    scheduleEvent(requestList, OPEN_DELAY)
+end
+
+local function onGameEnd()
+    settings = nil
+    quests, questOrder = {}, {}
+    changed(nil)
+end
+
+function init()
+    ProtocolGame.registerExtendedJSONOpcode(OPCODE, onMessage)
+    connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
+    connect(LocalPlayer, { onInventoryChange = recount })
+    connect(Container, { onOpen = recount, onClose = recount, onAddItem = recount, onRemoveItem = recount,
+        onUpdateItem = recount })
+    if g_game.isOnline() then
+        onGameStart()
+    end
+end
+
+function terminate()
+    disconnect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
+    disconnect(LocalPlayer, { onInventoryChange = recount })
+    disconnect(Container, { onOpen = recount, onClose = recount, onAddItem = recount, onRemoveItem = recount,
+        onUpdateItem = recount })
+    ProtocolGame.unregisterExtendedJSONOpcode(OPCODE)
+    if countEvent then
+        removeEvent(countEvent)
+        countEvent = nil
+    end
+end
