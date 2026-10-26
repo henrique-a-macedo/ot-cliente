@@ -79,11 +79,14 @@ MainWindow
     layout:
       type: verticalBox
 
+  // anchored to the same neighbours as the list, never to the list: list -> scrollbar -> list is an anchor loop
   VerticalScrollBar
     id: listScroll
-    anchors.top: list.top
-    anchors.bottom: list.bottom
+    anchors.top: hint.bottom
+    anchors.bottom: resultLabel.top
     anchors.right: parent.right
+    margin-top: 6
+    margin-bottom: 6
     step: 20
     pixels-scroll: true
 

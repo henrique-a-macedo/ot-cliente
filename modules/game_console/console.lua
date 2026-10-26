@@ -2654,14 +2654,25 @@ function returnChat()
     gameBottomPanel:setPhantom(false)
 end
 
+-- the splitter that sets the chat height stays over the map in the extended view: it goes with the chat, or a bare
+-- bar would float where the chat was
+local function setChatSplitterVisible(visible)
+    local splitter = modules.game_interface.getBottomSplitter()
+    if splitter then
+        splitter:setVisible(visible)
+    end
+end
+
 function extendedViewHide(bool)
     if bool then
         gameBottomPanel:hide()
+        setChatSplitterVisible(false)
         createButtonChat()
         extendedViewCanSee(extendedViewButtonShowAlphaChat:isOn())
     else
         consolePanel:getChildById('extendedViewHide'):setChecked(false)
         gameBottomPanel:show(true)
+        setChatSplitterVisible(true)
         extendedViewCanSee(false)
         returnChat()
         if extendedViewButtonShowAlphaChat then
@@ -2690,6 +2701,7 @@ function createButtonChat()
         extendedViewButtonToggleChat:setSize("60 60")
     else
         extendedViewButtonToggleChat:setIcon("/images/game/npcicons/icon_chat")
+        extendedViewButtonToggleChat:setTooltip(tr('Show the chat (Enter)'))
         extendedViewButtonToggleChat:setMarginBottom(10)
         extendedViewButtonToggleChat:setSize("30 23")
         extendedViewButtonToggleChat:addAnchor(AnchorLeft, "parent", AnchorLeft)
@@ -2703,7 +2715,9 @@ function createButtonChat()
         end
     end
     extendedViewButtonShowAlphaChat = g_ui.createWidget(stringNameMobileOrPc, mapPanel)
-    extendedViewButtonShowAlphaChat:setIcon("/images/game/npcicons/icon_chat")
+    -- a different icon: this one only shows the latest messages over the map, without the chat box
+    extendedViewButtonShowAlphaChat:setIcon("/images/topbuttons/motd")
+    extendedViewButtonShowAlphaChat:setTooltip(tr('Show the latest messages over the map (chat stays hidden)'))
     extendedViewButtonShowAlphaChat:addAnchor(AnchorBottom, "parent", AnchorBottom)
     if g_platform.isMobile() then
         extendedViewButtonShowAlphaChat:setMarginBottom(hightMobileWidget)
