@@ -1,0 +1,60 @@
+// a tracked quest: its name (click opens the journal on it, right click stops tracking) and, below, one line per
+// objective of the current stage
+QuestMiniTitle < Label
+  height: 14
+  margin-top: 6
+  padding-left: 2
+  font: verdana-11px-rounded
+  color: #e8c46a
+  phantom: false
+  text-auto-resize: false
+
+  $first:
+    margin-top: 2
+
+  $hover:
+    color: #ffe08a
+
+QuestMiniObjective < Label
+  height: 13
+  margin-left: 10
+  font: verdana-11px-monochrome
+  color: #c0c0c0
+  phantom: true
+
+QuestMiniEmpty < Label
+  height: 28
+  margin-top: 4
+  padding-left: 2
+  text-wrap: true
+  font: verdana-11px-monochrome
+  color: #808080
+  phantom: true
+
+MiniWindow
+  id: questTrackerMini
+  height: 160
+  @onOpen: modules.game_questtracker.onMiniOpen()
+  @onClose: modules.game_questtracker.onMiniClose()
+  &save: true
+
+  Label
+    id: miniwindowTitle
+    anchors.top: miniwindowHeader.top
+    anchors.left: miniwindowHeader.left
+    anchors.right: miniwindowHeader.right
+    margin-top: 2
+    margin-left: 6
+    margin-right: 50
+    font: verdana-11px-monochrome
+    height: 13
+    !text: tr('Quest Tracker')
+    color: #9d9d9dff
+
+  // the window sets this panel's height: rows scroll, like the currency pouch
+  MiniWindowContents
+    id: contentsPanel
+    padding-left: 3
+    padding-right: 3
+    padding-bottom: 3
+    layout: verticalBox

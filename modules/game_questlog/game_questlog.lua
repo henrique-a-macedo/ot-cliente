@@ -616,8 +616,10 @@ local function isCompletedMissionText(text)
     return string.find(string.lower(text), "%(completed%)") ~= nil
 end
 
+-- The Tibia quest tracker window is replaced by game_questtracker (WoW-style, opcode 126): its button is that
+-- module's, and the old window is still built (its data feeds the Quest Log) but never shown.
 local function ensureQuestTrackerButton()
-    if buttonQuestLogTrackerButton then
+    if true then
         return
     end
 
@@ -631,7 +633,6 @@ local function showQuestTracker()
     ensureQuestTrackerButton()
 
     if trackerMiniWindow then
-        toggleTracker()
         return
     end
     trackerMiniWindow = g_ui.createWidget('QuestLogTracker')
@@ -798,9 +799,7 @@ local function showQuestTracker()
         rebuildTrackerFromSettings()
     end
 
-    -- created on demand, after the login's setupOnStart: take the saved place and size now, then show it
-    trackerMiniWindow:setupOnStart()
-    openTracker()
+    -- never shown: game_questtracker is the tracker now
 end
 
 --[[=================================================
@@ -1090,6 +1089,13 @@ function questLogController:close()
 end
 
 function questLogController:toggleMiniWindowsTracker()
+    -- the tracker is game_questtracker's mini window now
+    if modules.game_questtracker then
+        modules.game_questtracker.toggleMini()
+    end
+    if true then
+        return
+    end
     if not trackerMiniWindow then
         showQuestTracker()
         return
@@ -1309,12 +1315,8 @@ function questLogController:onGameStart()
         ensureQuestTrackerButton()
 
         if trackerMiniWindow then
-            trackerMiniWindow:setupOnStart()
-            -- Rebuild tracker from saved settings
+            -- Rebuild tracker from saved settings (the window itself is never shown)
             rebuildTrackerFromSettings()
-        elseif trackerWasOpen() then
-            -- the window only exists once opened: a tracker left open comes back on login
-            showQuestTracker()
         end
 
         -- Send local tracker cache on login, matching the official client behavior.

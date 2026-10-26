@@ -153,12 +153,122 @@ local function onMessage(protocol, opcode, data)
     end
 end
 
--- set by the mini window: (before, after) of an update, for the "Quest updated" message
-onQuestUpdate = nil
+-- mini window ---------------------------------------------------------------------------------------------------
+local miniWindow = nil
+local miniButton = nil
+
+-- "Rats 2/3"; a single-step objective shows just its label; a hidden one only its count ("?" for a single step)
+local function objectiveText(objective)
+    local current, target = objectiveCount(objective)
+    local label = objective.hidden and '?' or (objective.label or '?')
+    if target <= 1 then
+        return label
+    end
+    return string.format('%s %d/%d', label, current, target)
+end
+
+local function drawMini()
+    if not miniWindow then
+        return
+    end
+    local list = miniWindow:getChildById('contentsPanel')
+    list:destroyChildren()
+    local shown = 0
+    for _, id in ipairs(questOrder) do
+        local view = quests[id]
+        if view and view.state == 'active' and isTracked(id) then
+            shown = shown + 1
+            local title = g_ui.createWidget('QuestMiniTitle', list)
+            title:setText(view.name)
+            title:setTooltip(view.stage and (view.stage.title .. ': ' .. view.stage.text) or view.name)
+            title.onClick = function()
+                openJournal(id)
+            end
+            title.onMouseRelease = function(widget, mousePos, mouseButton)
+                if mouseButton ~= MouseRightButton then
+                    return false
+                end
+                local menu = g_ui.createWidget('PopupMenu')
+                menu:setGameMenu(true)
+                menu:addOption(tr('Stop tracking'), function()
+                    setTracked(id, false)
+                end)
+                menu:addOption(tr('Open in the journal'), function()
+                    openJournal(id)
+                end)
+                menu:display(mousePos)
+                return true
+            end
+            for _, objective in ipairs(view.stage and view.stage.objectives or {}) do
+                local line = g_ui.createWidget('QuestMiniObjective', list)
+                local current, target = objectiveCount(objective)
+                line:setText(objectiveText(objective))
+                if current >= target then
+                    line:setColor('#7fbf6f')
+                end
+            end
+        end
+    end
+    if shown == 0 then
+        local empty = g_ui.createWidget('QuestMiniEmpty', list)
+        empty:setText(tr('No quest tracked. Open the quest journal to track one.'))
+    end
+end
+
+-- "Quest started / updated / completed" on screen when a tracked quest moves
+onQuestUpdate = function(before, after)
+    local message
+    if after.state == 'done' and before and before.state == 'active' then
+        message = tr('Quest completed: %s', after.name)
+    elseif after.state == 'active' and (not before or before.state ~= 'active') then
+        message = tr('Quest started: %s', after.name)
+    elseif after.stage and before and before.stage and after.stage.index ~= before.stage.index then
+        message = tr('Quest updated: %s - %s', after.name, after.stage.title)
+    end
+    if message and modules.game_textmessage then
+        modules.game_textmessage.displayGameMessage(message)
+    end
+end
+
+function onMiniOpen()
+    if miniButton then
+        miniButton:setOn(true)
+    end
+    drawMini()
+end
+
+function onMiniClose()
+    if miniButton then
+        miniButton:setOn(false)
+    end
+end
+
+function toggleMini()
+    if not miniWindow then
+        return
+    end
+    if miniWindow:isVisible() then
+        miniWindow:close()
+        return
+    end
+    if not miniWindow:getParent() then
+        local panel = modules.game_interface.findContentPanelAvailable(miniWindow, miniWindow:getMinimumHeight())
+        if not panel then
+            return
+        end
+        panel:addChild(miniWindow)
+    end
+    miniWindow:open()
+end
+
+-- the journal (Task 7) fills this in
+openJournal = openJournal or function() end
 
 local function onGameStart()
     settings = characterSettings()
     quests, questOrder = {}, {}
+    miniWindow:setupOnStart() -- place, size, minimized and closed per character
+    drawMini()
     scheduleEvent(requestList, OPEN_DELAY)
 end
 
@@ -169,6 +279,20 @@ local function onGameEnd()
 end
 
 function init()
+    miniWindow = g_ui.loadUI('mini')
+    miniWindow:setup()
+    miniWindow:setContentMinimumHeight(30)
+    for _, id in ipairs({ 'toggleFilterButton', 'newWindowButton', 'contextMenuButton' }) do
+        local button = miniWindow:recursiveGetChildById(id)
+        if button then
+            button:setVisible(false)
+        end
+    end
+    miniButton = modules.game_mainpanel.addToggleButton('questTrackerButton', tr('Quest Tracker'),
+        '/images/options/button_questlog_tracker', toggleMini, false, 1001)
+    onChange(function()
+        drawMini()
+    end)
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onMessage)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
     connect(LocalPlayer, { onInventoryChange = recount })
@@ -188,5 +312,13 @@ function terminate()
     if countEvent then
         removeEvent(countEvent)
         countEvent = nil
+    end
+    if miniButton then
+        miniButton:destroy()
+        miniButton = nil
+    end
+    if miniWindow then
+        miniWindow:destroy()
+        miniWindow = nil
     end
 end
