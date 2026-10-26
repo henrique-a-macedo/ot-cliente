@@ -1,8 +1,16 @@
+// section title (General, League)
 PouchGroupTitle < Label
   font: verdana-11px-antialised
-  color: #e0e0e0
+  color: #e8c860
+  height: 20
+  text-offset: 2 4
+  background-color: #ffffff12
+  margin-top: 4
+
+PouchEmpty < Label
   height: 18
-  text-offset: 2 3
+  text-offset: 12 2
+  color: #808080
 
 PouchRow < UIWidget
   height: 38

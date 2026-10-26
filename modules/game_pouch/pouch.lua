@@ -33,31 +33,30 @@ local function openWithdraw(currency)
     withdrawWindow.count:focus()
 end
 
+-- every section shows with its title (General, League...), even empty
 local function render(groups)
     local list = pouchWindow.list
     list:destroyChildren()
-    local any = false
     for _, group in ipairs(groups) do
-        if #group.currencies > 0 then
-            any = true
-            local title = g_ui.createWidget('PouchGroupTitle', list)
-            title:setText(group.name)
-            for _, currency in ipairs(group.currencies) do
-                local row = g_ui.createWidget('PouchRow', list)
+        local title = g_ui.createWidget('PouchGroupTitle', list)
+        title:setText(group.name)
+        if #group.currencies == 0 then
+            local empty = g_ui.createWidget('PouchEmpty', list)
+            empty:setText(tr('Nothing here yet.'))
+        end
+        for _, currency in ipairs(group.currencies) do
+            local row = g_ui.createWidget('PouchRow', list)
+            if currency.clientId > 0 then
                 row.icon:setItemId(currency.clientId)
-                row.name:setText(currency.name)
-                row.amount:setText(tr('Amount: %d', currency.amount))
-                row:setTooltip(currency.description)
-                row.withdraw.onClick = function()
-                    openWithdraw(currency)
-                end
+            end
+            row.name:setText(currency.name)
+            row.amount:setText(tr('Amount: %d', currency.amount))
+            row:setTooltip(currency.description)
+            row.withdraw:setVisible(currency.withdrawable)
+            row.withdraw.onClick = function()
+                openWithdraw(currency)
             end
         end
-    end
-    if not any then
-        local empty = g_ui.createWidget('PouchGroupTitle', list)
-        empty:setText(tr('Your pouch is empty.'))
-        empty:setColor('#a0a0a0')
     end
 end
 
