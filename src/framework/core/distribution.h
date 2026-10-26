@@ -47,4 +47,8 @@ namespace distribution
     // May the file at this virtual path be read? Packages: anything. The user write dir: only data files
     // (settings, minimap cache), never code. Anything else: no.
     bool canRead(const std::string& virtualPath);
+
+    // A loose file of the work dir that the signed manifest lists (e.g. otclient_ac.dll): locks it against writes
+    // for the session and checks size and SHA-256. Returns its full path, or "" (reason logged) if it does not match.
+    std::string lockVerifiedFile(const std::string& name);
 }

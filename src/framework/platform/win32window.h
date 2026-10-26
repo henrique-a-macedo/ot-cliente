@@ -49,6 +49,8 @@ class WIN32Window : public PlatformWindow
 public:
     WIN32Window();
 
+    HWND getWindowHandle() const { return m_window; }
+
     void init() override;
     void terminate() override;
 
