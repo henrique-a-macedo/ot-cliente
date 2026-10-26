@@ -390,10 +390,13 @@ function UIMoveableTabBar:clearTabs()
     while #self.tabs > 0 do
         self:removeTab(self.tabs[#self.tabs])
     end
+    while self.hiddenTabs and #self.hiddenTabs > 0 do
+        self:removeTab(self.hiddenTabs[#self.hiddenTabs])
+    end
 end
 
 function UIMoveableTabBar:removeTab(tab)
-    local tabTables = {self.tabs, self.preTabs, self.postTabs}
+    local tabTables = {self.tabs, self.preTabs, self.postTabs, self.hiddenTabs or {}}
     local index = nil
     local tabTable = nil
     for i = 1, #tabTables do
@@ -441,6 +444,57 @@ function UIMoveableTabBar:getTab(text)
             return tab
         end
     end
+    for k, tab in pairs(self.hiddenTabs or {}) do
+        if tab:getText():lower() == text:lower() then
+            return tab
+        end
+    end
+end
+
+-- takes a tab off the bar without closing it: it keeps its panel and keeps receiving (the console's second pane
+-- shows the loot this way); showTab puts it back at the end
+function UIMoveableTabBar:hideTab(tab)
+    self.hiddenTabs = self.hiddenTabs or {}
+    if table.find(self.hiddenTabs, tab) then
+        return
+    end
+    for _, tabTable in ipairs({self.tabs, self.preTabs, self.postTabs}) do
+        local index = table.find(tabTable, tab)
+        if index then
+            if self.currentTab == tab then
+                if #self.tabs == 1 then
+                    self.currentTab = nil
+                elseif index == #self.tabs then
+                    self:selectPrevTab()
+                else
+                    self:selectNextTab()
+                end
+            end
+            table.remove(tabTable, index)
+            break
+        end
+    end
+    table.insert(self.hiddenTabs, tab)
+    tab:setChecked(false)
+    tab:setVisible(false)
+    updateTabs(self)
+end
+
+function UIMoveableTabBar:showTab(tab)
+    local index = self.hiddenTabs and table.find(self.hiddenTabs, tab)
+    if not index then
+        return
+    end
+    table.remove(self.hiddenTabs, index)
+    hideTabs(self, true, self.postTabs, tab:getWidth())
+    table.insert(self.tabs, tab)
+    tab:setVisible(true)
+    updateMargins(self)
+    updateNavigation(self)
+end
+
+function UIMoveableTabBar:isTabHidden(tab)
+    return self.hiddenTabs ~= nil and table.find(self.hiddenTabs, tab) ~= nil
 end
 
 function UIMoveableTabBar:selectTab(tab)

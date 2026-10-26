@@ -207,6 +207,7 @@ void Application::registerLuaFunctions()
     g_lua.registerClass<LoginHttp>();
     g_lua.bindClassStaticFunction<LoginHttp>("create", [] { return std::make_shared<LoginHttp>(); });
     g_lua.bindClassMemberFunction<LoginHttp>("httpLogin", &LoginHttp::httpLogin);
+    g_lua.bindClassMemberFunction<LoginHttp>("setTicket", &LoginHttp::setTicket);
 
     // Http
     g_lua.registerSingletonClass("g_http");

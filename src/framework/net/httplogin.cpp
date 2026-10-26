@@ -70,6 +70,7 @@ namespace {
         const auto lowered = toLowerCopy(key);
         return lowered.find("password") != std::string::npos
             || lowered.find("token") != std::string::npos
+            || lowered.find("ticket") != std::string::npos
             || lowered.find("session") != std::string::npos;
     }
 
@@ -77,6 +78,7 @@ namespace {
     {
         const auto lowered = toLowerCopy(key);
         return lowered.find("token") != std::string::npos
+            || lowered.find("ticket") != std::string::npos
             || lowered.find("session") != std::string::npos
             || lowered.find("cookie") != std::string::npos;
     }
@@ -313,6 +315,7 @@ void LoginHttp::httpLogin(const std::string& host, const std::string& path,
                 body["token"] = token;
                 body["authenticatorToken"] = token;
             }
+            applyTicket(body);
 
             std::string bodyStr = body.dump(1);
             attr.requestData = bodyStr.data();
@@ -395,6 +398,7 @@ LoginHttp::HttpResponse LoginHttp::loginHttpsJson(const std::string& host,
         body["token"] = token;
         body["authenticatorToken"] = token;
     }
+    applyTicket(body);
 
     const httplib::Headers headers = { {"User-Agent", "Mozilla/5.0"} };
 
@@ -440,6 +444,7 @@ LoginHttp::HttpResponse LoginHttp::loginHttpJson(const std::string& host,
     if (!token.empty()) {
         body["token"] = token;
     }
+    applyTicket(body);
 
     httplib::Result response =
         client.Post(path, headers, body.dump(), "application/json");

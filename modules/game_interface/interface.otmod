@@ -29,6 +29,9 @@ Module
     - game_ruleviolation
     - game_market
     - game_reforge
+    - game_buffs
+    - game_pouch
+    - game_talents
     - game_spelllist
     - game_modaldialog
     - game_shaders

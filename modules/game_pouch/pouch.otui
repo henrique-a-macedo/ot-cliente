@@ -1,0 +1,83 @@
+// section title (General, League), like the VIP groups: white text over a separator
+PouchGroupTitle < Label
+  height: 20
+  margin-top: 8
+  padding-left: 2
+  color: #f7f7f7
+  text-align: left
+
+  HorizontalSeparator
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+
+  $first:
+    margin-top: 4
+
+PouchEmpty < Label
+  height: 14
+  text-offset: 8 1
+  font: verdana-9px-rounded
+  color: #808080
+
+// text-only row: name; amount followed by the take button (what it does is on the tooltip)
+PouchRow < UIWidget
+  height: 48
+  margin-top: 4
+  padding-left: 4
+  padding-right: 2
+  padding-top: 2
+  background-color: #ffffff0a
+
+  Label
+    id: name
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.top: parent.top
+    margin-top: 2
+    color: #dfdfdf
+
+  Label
+    id: amount
+    anchors.left: parent.left
+    anchors.top: name.bottom
+    margin-top: 8
+    text-auto-resize: true
+    color: #8fd18f
+
+  Button
+    id: withdraw
+    !text: tr('Take')
+    !tooltip: tr('Withdraw as items, to trade')
+    anchors.left: amount.right
+    anchors.verticalCenter: amount.verticalCenter
+    margin-left: 12
+
+MiniWindow
+  id: pouchWindow
+  height: 180
+  @onOpen: modules.game_pouch.onMiniWindowOpen()
+  @onClose: modules.game_pouch.onMiniWindowClose()
+  &save: true
+
+  Label
+    id: miniwindowTitle
+    anchors.top: miniwindowHeader.top
+    anchors.left: miniwindowHeader.left
+    anchors.right: miniwindowHeader.right
+    margin-top: 2
+    margin-left: 6
+    margin-right: 50
+    font: verdana-11px-monochrome
+    height: 13
+    !text: tr('Currency Pouch')
+    color: #9d9d9dff
+
+  // the window sets this panel's height (anchored top and bottom): fit-children here fights it and the layout
+  // never settles (the client froze); rows scroll instead, like the VIP list
+  MiniWindowContents
+    id: contentsPanel
+    padding-left: 3
+    padding-right: 3
+    padding-bottom: 3
+    layout: verticalBox

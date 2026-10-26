@@ -100,11 +100,13 @@ function UIMiniWindow:setup()
 
     local lockButton = self:getChildById('lockButton')
     if lockButton then
+        -- the lock has its own state: modules toggle 'draggable' on every click (containers do), so it
+        -- cannot tell whether the window is locked
         lockButton.onClick = function()
-            if self:isDraggable() then
-                self:lock()
-            else
+            if self:isLocked() then
                 self:unlock()
+            else
+                self:lock()
             end
         end
     end
@@ -115,6 +117,85 @@ function UIMiniWindow:setup()
         else
             self:minimize()
         end
+    end
+
+    -- each module hides a different set of header buttons; re-chain the visible ones whenever one shows or hides
+    local relayout = function()
+        self:layoutHeaderButtons()
+    end
+    for _, id in ipairs(UIMiniWindow.HEADER_BUTTONS) do
+        local button = self:recursiveGetChildById(id)
+        if button then
+            connect(button, { onVisibilityChange = relayout })
+        end
+    end
+
+    -- the title never runs under the buttons: it is cut with '...' to the room it has, keeping the full text
+    local title = self:getChildById('miniwindowTitle')
+    if title then
+        title.fullTitle = title:getText()
+        connect(title, {
+            onTextChange = function(widget, text)
+                if not widget.elidingTitle then
+                    widget.fullTitle = text
+                    self:fitTitle()
+                end
+            end,
+            onGeometryChange = function()
+                self:fitTitle()
+            end
+        })
+    end
+    self:layoutHeaderButtons()
+end
+
+function UIMiniWindow:fitTitle()
+    local title = self:getChildById('miniwindowTitle')
+    if not title or not title.fullTitle then
+        return
+    end
+    local full = title.fullTitle
+    local room = title:getWidth() - title:getPaddingLeft() - title:getPaddingRight()
+    title.elidingTitle = true
+    title:setText(full)
+    if room > 0 and title:getTextSize().width > room then
+        for length = #full - 1, 1, -1 do
+            title:setText(full:sub(1, length):gsub('%s+$', '') .. '...')
+            if title:getTextSize().width <= room then
+                break
+            end
+        end
+    end
+    title.elidingTitle = false
+end
+
+-- header buttons left of minimize, right to left; the gap after minimize is a little wider than between the others
+UIMiniWindow.HEADER_BUTTONS = { 'upButton', 'toggleFilterButton', 'contextMenuButton', 'newWindowButton', 'lockButton' }
+local HEADER_FIRST_GAP = 4
+local HEADER_GAP = 2
+
+function UIMiniWindow:layoutHeaderButtons()
+    local minimizeButton = self:getChildById('minimizeButton')
+    if not minimizeButton then
+        return
+    end
+    local previous = minimizeButton
+    for _, id in ipairs(UIMiniWindow.HEADER_BUTTONS) do
+        local button = self:recursiveGetChildById(id)
+        if button and button:isExplicitlyVisible() then
+            button:breakAnchors()
+            button:addAnchor(AnchorTop, previous:getId(), AnchorTop)
+            button:addAnchor(AnchorRight, previous:getId(), AnchorLeft)
+            button:setMarginRight(previous == minimizeButton and HEADER_FIRST_GAP or HEADER_GAP)
+            button:setMarginTop(0)
+            previous = button
+        end
+    end
+    local title = self:getChildById('miniwindowTitle')
+    if title then
+        title:addAnchor(AnchorRight, previous:getId(), AnchorLeft)
+        title:setMarginRight(4)
+        self:fitTitle()
     end
 end
 
@@ -219,7 +300,7 @@ end
 
 function UIMiniWindow:onDragEnter(mousePos)
     local parent = self:getParent()
-    if not parent then
+    if not parent or self:isLocked() then
         return false
     end
 
@@ -537,11 +618,16 @@ function UIMiniWindow:isResizeable()
     return resizeBorder:isExplicitlyVisible() and resizeBorder:isEnabled()
 end
 
+function UIMiniWindow:isLocked()
+    return self.locked == true
+end
+
 function UIMiniWindow:lock(dontSave)
     local lockButton = self:getChildById('lockButton')
     if lockButton then
         lockButton:setOn(true)
     end
+    self.locked = true
     self:setDraggable(false)
     self:setBorderWidth(1)
     self:setBorderColor('#d33c3c')
@@ -559,6 +645,7 @@ function UIMiniWindow:unlock(dontSave)
     if lockButton then
         lockButton:setOn(false)
     end
+    self.locked = false
     self:setDraggable(true)
     self:setBorderWidth(0)
     if not dontSave then

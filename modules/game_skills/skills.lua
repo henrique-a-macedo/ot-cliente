@@ -49,12 +49,9 @@ local function setupUIButtons()
         toggleFilterButton:setOn(false)
     end
     
+    -- positions come from UIMiniWindow:layoutHeaderButtons
     local contextMenuButton = skillsWindow:recursiveGetChildById('contextMenuButton')
-    local minimizeButton = skillsWindow:recursiveGetChildById('minimizeButton')
-    if contextMenuButton and minimizeButton then
-        contextMenuButton:addAnchor(AnchorTop, minimizeButton:getId(), AnchorTop)
-        contextMenuButton:addAnchor(AnchorRight, minimizeButton:getId(), AnchorLeft)
-        contextMenuButton:setMarginRight(7)
+    if contextMenuButton then
         contextMenuButton.onClick = function(widget, mousePos, mouseButton)
             return showSkillsContextMenu(widget, mousePos, mouseButton)
         end
@@ -69,6 +66,46 @@ end
 -- attributes (STR/DEX/INT/VIT) live on the server; it sends "str=1;dex=2;int=3;vit=4;free=5"
 local ATTRIBUTE_OPCODE = 120
 local ATTRIBUTE_ROWS = { str = 'attrStr', dex = 'attrDex', int = 'attrInt', vit = 'attrVit' }
+
+-- tooltip math mirrors forgottenserver/data/scripts/lib/attributes.lua (attackMultiplier, defenseReduction,
+-- VIT_PHYSICAL_WEIGHT, INT_MAGIC_WEIGHT, SUPPRESSION_AMOUNT, *_REGEN_PER_POINT); keep both in sync
+local function attackMultiplier(points)
+    if points <= 0 then
+        return 1
+    end
+    return 1 + (points / 100) ^ 0.9
+end
+
+local function defenseReduction(points)
+    return 0.75 * points / (points + 120)
+end
+
+local function percent(fraction)
+    return string.format('%.1f%%', fraction * 100)
+end
+
+local function attributeTooltip(id, values)
+    local str, dex, int, vit = values.str or 0, values.dex or 0, values.int or 0, values.vit or 0
+    local physical = percent(defenseReduction(str + vit * 1.5))
+    if id == 'str' then
+        return tr('Strength: melee weapon damage and physical defense.') .. '\n' ..
+            tr('Melee damage: x%.2f', attackMultiplier(str)) .. '\n' ..
+            tr('Physical damage taken: -%s (with Vitality)', physical)
+    elseif id == 'dex' then
+        return tr('Dexterity: bow, crossbow and throwing damage, and a chance to suppress magic hits.') .. '\n' ..
+            tr('Distance damage: x%.2f', attackMultiplier(dex)) .. '\n' ..
+            tr('Chance to cut a magic hit by 40%%: %s', percent(defenseReduction(dex)))
+    elseif id == 'int' then
+        return tr('Intelligence: wand, spell and healing power, magic defense and mana regeneration.') .. '\n' ..
+            tr('Spell, wand and healing power: x%.2f', attackMultiplier(int)) .. '\n' ..
+            tr('Magic damage taken: -%s', percent(defenseReduction(int * 0.2))) .. '\n' ..
+            tr('Mana regeneration: +%d every 2 seconds', math.floor(int * 0.1))
+    elseif id == 'vit' then
+        return tr('Vitality: physical defense and health regeneration.') .. '\n' ..
+            tr('Physical damage taken: -%s (with Strength)', physical) .. '\n' ..
+            tr('Health regeneration: +%d every 2 seconds', math.floor(vit * 0.1))
+    end
+end
 
 local function onAttributesMessage(protocol, opcode, buffer)
     if not skillsWindow then
@@ -85,11 +122,13 @@ local function onAttributesMessage(protocol, opcode, buffer)
         local row = skillsWindow:recursiveGetChildById(rowId)
         row:getChildById('value'):setText(tostring(values[id] or 0))
         row:getChildById('add'):setVisible(free > 0)
+        row:setTooltip(attributeTooltip(id, values))
     end
 
     local freeRow = skillsWindow:recursiveGetChildById('attrFree')
     freeRow:getChildById('value'):setText(tostring(free))
     freeRow:setVisible(free > 0)
+    freeRow:setTooltip(tr('Points to spend: click + next to an attribute. You get 5 points every 5 levels.'))
 end
 
 function addAttributePoint(id)
@@ -184,13 +223,8 @@ local SKILL_GROUPS = {
     },
     GameAdditionalSkills = {
         'skillId7', 'skillId8', 'skillId9', 'skillId10', 'skillId11', 'skillId12'
-    },
-    GameForgeSkillStats = {
-        'skillId13', 'skillId14', 'skillId15'
-    },
-    GameForgeSkillStats1332 = {
-        'skillId16'
     }
+    -- forge skills (Fatal, Dodge, Momentum, Transcendence: skillId13-16) were removed from the window
 }
 
 local function setSkillGroupVisibility(groupName, visible)
@@ -294,21 +328,32 @@ local function hideOldClientStats()
     local features = {
         newAppearance = g_game.getFeature(GameEnterGameShowAppearance),
         charSkills = g_game.getFeature(GameCharacterSkillStats),
-        additionalSkills = g_game.getFeature(GameAdditionalSkills),
-        forgeSkills = g_game.getFeature(GameForgeSkillStats)
+        additionalSkills = g_game.getFeature(GameAdditionalSkills)
     }
     if features.newAppearance then
         skillsWindow:recursiveGetChildById('regenerationTime'):getChildByIndex(1):setText('Food')
         skillsWindow:recursiveGetChildById('experience'):getChildByIndex(1):setText('XP')
     end
-    local version = g_game.getClientVersion()
     setSkillGroupVisibility('offence', features.charSkills)
     setSkillGroupVisibility('defence', features.charSkills)
     setSkillGroupVisibility('misc', features.charSkills)
     setSkillGroupVisibility('GameAdditionalSkills', features.additionalSkills)
-    setSkillGroupVisibility('GameForgeSkillStats1332', features.forgeSkills and version >= 1332)
-    setSkillGroupVisibility('GameForgeSkillStats', features.forgeSkills)
 end
+
+-- menu option -> skill row it shows the bar of
+SKILL_MENU_ROWS = {
+    showLevel = 'level',
+    showStamina = 'stamina',
+    showOfflineTraining = 'offlineTraining',
+    showMagic = 'magiclevel',
+    showFist = 'skillId0',
+    showClub = 'skillId1',
+    showSword = 'skillId2',
+    showAxe = 'skillId3',
+    showDistance = 'skillId4',
+    showShielding = 'skillId5',
+    showFishing = 'skillId6'
+}
 
 local function hideMenuOptionsForOldClients(menu)
     if not g_game.getFeature(GameOfflineTrainingTime) then
@@ -334,6 +379,17 @@ function showSkillsContextMenu(widget, mousePos, mouseButton)
     menu:setGameMenu(true)
 
     hideMenuOptionsForOldClients(menu)
+    -- the classic Tibia skills (magic level, fist... fishing) are gone from the window: no toggle for a row that
+    -- is never shown
+    for _, choice in ipairs(menu:getChildren()) do
+        local skillId = SKILL_MENU_ROWS[choice:getId()]
+        if skillId then
+            local row = skillsWindow:recursiveGetChildById(skillId)
+            if not row or not row:isExplicitlyVisible() then
+                choice:setVisible(false)
+            end
+        end
+    end
 
     for _, choice in ipairs(menu:getChildren()) do
         local choiceId = choice:getId()
@@ -600,15 +656,21 @@ function expToAdvance(currentLevel, currentExp)
     return expForLevel(currentLevel + 1) - currentExp
 end
 
+-- the lookups below tolerate missing rows: the server still sends skills whose rows were removed (forge skills)
 function resetSkillColor(id)
     local skill = skillsWindow:recursiveGetChildById(id)
+    if not skill then
+        return
+    end
     local widget = skill:getChildById('value')
     widget:setColor('#bbbbbb')
 end
 
 function toggleSkill(id, state)
     local skill = skillsWindow:recursiveGetChildById(id)
-    skill:setVisible(state)
+    if skill then
+        skill:setVisible(state)
+    end
 end
 
 function setSkillBase(id, value, baseValue)
@@ -616,6 +678,9 @@ function setSkillBase(id, value, baseValue)
         return
     end
     local skill = skillsWindow:recursiveGetChildById(id)
+    if not skill then
+        return
+    end
     local widget = skill:getChildById('value')
 
     if value > baseValue then
@@ -642,8 +707,9 @@ function setSkillValue(id, value)
         if usePercentage then
             local needsDecimals = (id == 'skillId10' or id == 'skillId12')
             local displayValue = needsDecimals and (value / 100) or value
+            -- leech amount keeps up to two decimals, without trailing zeros: 0%, 5.5%, 5.25%
             local text = needsDecimals
-                and string.format("%.2f%%", displayValue)
+                and (string.format("%.2f", displayValue):gsub("%.?0+$", "") .. "%")
                 or (displayValue .. "%")
         
             widget:setText(text)
@@ -822,17 +888,7 @@ function skillController:onGameStart()
         if sepDefense and sepDefense:isVisible() then
             sepDefense:setVisible(false)
         end
-
-        local lockButton = skillsWindow:recursiveGetChildById('lockButton')
-        local contextMenuButton = skillsWindow:recursiveGetChildById('contextMenuButton')
-        
-        if lockButton and contextMenuButton then
-            lockButton:breakAnchors()
-            lockButton:addAnchor(AnchorTop, contextMenuButton:getId(), AnchorTop)
-            lockButton:addAnchor(AnchorRight, contextMenuButton:getId(), AnchorLeft)
-            lockButton:setMarginRight(2)
-            lockButton:setMarginTop(0)
-        end
+        skillsWindow:layoutHeaderButtons()
     end
     
     scheduleEvent(function() 
@@ -980,7 +1036,7 @@ function skillController:onGameEnd()
         expSpeedEvent = nil
     end
     
-    local allGroups = {'offence', 'defence', 'misc', 'GameAdditionalSkills', 'GameForgeSkillStats', 'GameForgeSkillStats1332'}
+    local allGroups = {'offence', 'defence', 'misc', 'GameAdditionalSkills'}
     for _, groupName in pairs(allGroups) do
         local skills = SKILL_GROUPS[groupName]
         if skills then
@@ -1379,8 +1435,7 @@ local function setSkillValueWithTooltips(id, value, tooltip, showPercentage, col
     
     if g_game.getClientVersion() < 1412 then
         local oldClientStats = {
-            'skillId7', 'skillId8', 'skillId9', 'skillId10', 'skillId11', 'skillId12', 
-            'skillId13', 'skillId14', 'skillId15', 'skillId16',
+            'skillId7', 'skillId8', 'skillId9', 'skillId10', 'skillId11', 'skillId12',
             'damageHealing', 'attackValue', 'convertedDamage', 'convertedElement',
             'criticalHit', 'lifeLeech', 'manaLeech', 'criticalChance', 'criticalExtraDamage', 'onslaught',
             'physicalResist', 'fireResist', 'earthResist', 'energyResist', 'IceResist', 

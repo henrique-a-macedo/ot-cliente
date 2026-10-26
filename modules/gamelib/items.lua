@@ -58,15 +58,21 @@ function ItemsDatabase.setRarityItem(widget, item, style)
 
     if not imagePath then
         -- no frame applies (empty slot or frames disabled): clear a frame left by a previous item,
-        -- but only if this widget is currently showing one, to avoid clobbering custom backgrounds
+        -- but only if this widget is currently showing one, to avoid clobbering custom backgrounds.
+        -- The widget gets back the image it had before the frame: inventory slots have none, and an opaque
+        -- background there would hide the slot's placeholder (helmet, sword... silhouettes)
         local currentSource = widget:getImageSource()
         if currentSource == RARITY_FRAME_IMAGES.frames or currentSource == RARITY_FRAME_IMAGES.corners then
             widget:setImageClip(nil)
-            widget:setImageSource('/images/ui/item')
+            widget:setImageSource(widget.imageBeforeRarity or '')
         end
         return
     end
 
+    local currentSource = widget:getImageSource()
+    if currentSource ~= RARITY_FRAME_IMAGES.frames and currentSource ~= RARITY_FRAME_IMAGES.corners then
+        widget.imageBeforeRarity = currentSource
+    end
     widget:setImageClip(clip)
     widget:setImageSource(imagePath)
     if style then

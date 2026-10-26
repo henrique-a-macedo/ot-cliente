@@ -24,6 +24,7 @@
 
 #include <physfs.h>
 
+#include "distribution.h"
 #include "filestream.h"
 #include "graphicalapplication.h"
 #include "framework/graphics/drawpoolmanager.h"
@@ -520,7 +521,10 @@ std::string ResourceManager::readFileContents(const std::string& fileName)
 {
     const std::string fullPath = resolvePath(fileName);
 
-    if (fullPath.find(AY_OBFUSCATE("/downloads")) != std::string::npos) {
+    if constexpr (distribution::enabled()) {
+        if (!distribution::canRead(fullPath))
+            throw Exception("unable to open file '{}': not from a verified package", fullPath);
+    } else if (fullPath.find(AY_OBFUSCATE("/downloads")) != std::string::npos) {
         const auto dfile = g_http.getFile(fullPath.substr(10));
         if (dfile)
             return std::string(dfile->response.begin(), dfile->response.end());
@@ -606,6 +610,8 @@ bool ResourceManager::writeFileContents(const std::string& fileName, const std::
 FileStreamPtr ResourceManager::openFile(const std::string& fileName)
 {
     const std::string fullPath = resolvePath(fileName);
+    if (!distribution::canRead(fullPath))
+        throw Exception("unable to open file '{}': not from a verified package", fullPath);
 
     PHYSFS_File* file = PHYSFS_openRead(fullPath.c_str());
     if (!file)
@@ -1211,7 +1217,8 @@ void ResourceManager::updateExecutable(std::string fileName)
 }
 
 bool ResourceManager::launchCorrect(const std::vector<std::string>& args) { // curently works only on windows
-#if (defined(ANDROID) || defined(FREE_VERSION))
+    // distribution: never hand over to another executable (the launcher only checked this one)
+#if (defined(ANDROID) || defined(FREE_VERSION) || defined(OTC_DISTRIBUTION))
     return false;
 #else
     const auto normalizeName = [](std::string name) {

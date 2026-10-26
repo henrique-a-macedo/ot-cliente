@@ -33,16 +33,77 @@ end
 mapController = Controller:new()
 mapController:setUI('minimap', modules.game_interface.getMainRightPanel())
 
-function mapController:onInit()
-    -- keep only the +/- and floor up/down buttons drawn over the map
-    self.ui.minimapBorder.minimap:getChildById('resetButton'):hide()
+-- extended view: while the title bar is dragged, a translucent box shows where the minimap will land
+local dropGhost = nil
 
+local function sideAt(mousePos)
+    return mousePos.x < rootWidget:getWidth() / 2 and 'left' or 'right'
+end
+
+local function placeDropGhost(side)
+    local gameRoot = modules.game_interface.getRootPanel()
+    local holder = modules.game_interface.getExtendedMinimapHolder()
+    local width, height = holder:getWidth(), holder:getHeight()
+    local x = side == 'left' and gameRoot:getX() or gameRoot:getX() + gameRoot:getWidth() - width
+    dropGhost:setRect({ x = x, y = holder:getY(), width = width, height = height })
+end
+
+local function destroyDropGhost()
+    if dropGhost then
+        dropGhost:destroy()
+        dropGhost = nil
+    end
+end
+
+-- while dragged, the minimap leaves its holder and follows the mouse (like the other windows); on drop it goes
+-- back into the holder, which moves to the chosen side. UIWidget.setParent skips the miniwindow's saved position.
+local dragOffset = nil
+
+local function followMouse(mousePos)
+    mapController.ui:setPosition({ x = mousePos.x - dragOffset.x, y = mousePos.y - dragOffset.y })
+end
+
+function mapController:onInit()
     local dragHandle = self.ui:getChildById('dragHandle')
-    dragHandle.onDragEnter = function()
+    dragHandle.onDragEnter = function(widget, mousePos)
+        local ui = mapController.ui
+        destroyDropGhost()
+        dropGhost = g_ui.createWidget('UIWidget', rootWidget)
+        dropGhost:setPhantom(true)
+        dropGhost:setBackgroundColor('#ffffff18')
+        dropGhost:setBorderWidth(1)
+        dropGhost:setBorderColor('#ffffff80')
+        placeDropGhost(sideAt(mousePos))
+
+        dragOffset = { x = mousePos.x - ui:getX(), y = mousePos.y - ui:getY() }
+        local size = ui:getSize()
+        UIWidget.setParent(ui, rootWidget)
+        ui:breakAnchors()
+        ui:setSize(size)
+        ui:setOpacity(0.85)
+        followMouse(mousePos)
+        ui:raise()
+        return true
+    end
+    dragHandle.onDragMove = function(widget, mousePos, mouseMoved)
+        if dropGhost then
+            placeDropGhost(sideAt(mousePos))
+        end
+        if dragOffset then
+            followMouse(mousePos)
+        end
         return true
     end
     dragHandle.onDragLeave = function(widget, droppedWidget, mousePos)
-        modules.game_interface.setMinimapSide(mousePos.x < rootWidget:getWidth() / 2 and 'left' or 'right')
+        destroyDropGhost()
+        local ui = mapController.ui
+        if dragOffset then
+            dragOffset = nil
+            ui:setOpacity(1)
+            UIWidget.setParent(ui, modules.game_interface.getExtendedMinimapHolder())
+            ui:fill('parent')
+        end
+        modules.game_interface.setMinimapSide(sideAt(mousePos))
         return true
     end
 end
@@ -89,6 +150,7 @@ function mapController:onGameEnd()
 end
 
 function mapController:onTerminate()
+    destroyDropGhost()
     if iconTopMenu then
         iconTopMenu:destroy()
         iconTopMenu = nil
