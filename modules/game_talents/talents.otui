@@ -30,7 +30,7 @@ TalentLink < UIWidget
 MainWindow
   id: talentsWindow
   !text: tr('Talents')
-  size: 560 380
+  size: 590 560
   visible: false
   @onEscape: modules.game_talents.hide()
 

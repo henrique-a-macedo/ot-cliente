@@ -2,8 +2,8 @@
 -- The server sends each node with its grid position, rank and whether it can be learned; the window draws the nodes
 -- on a canvas with lines from each prerequisite and buys a node on click (the server checks everything again).
 local OPCODE = 123
-local COLUMN_WIDTH = 120
-local ROW_HEIGHT = 80
+local COLUMN_WIDTH = 140
+local ROW_HEIGHT = 70
 local MARGIN = 14
 local LINK_WIDTH = 2
 local RESULT_COLORS = { ok = '#7fd77f', error = '#e06060' }
