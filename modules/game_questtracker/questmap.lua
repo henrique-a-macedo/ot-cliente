@@ -95,6 +95,19 @@ local function addOverlay(map, style, place, text, group)
     overlays[#overlays + 1] = widget
 end
 
+-- on the map, a list: the place, then "48  Minotaur" per monster
+function placeList(place, label)
+    local lines = { place.name }
+    if place.monsters and #place.monsters > 0 then
+        for _, monster in ipairs(place.monsters) do
+            lines[#lines + 1] = string.format('%d  %s', monster.count or 0, monster.name or label or '?')
+        end
+    elseif place.count and label then
+        lines[#lines + 1] = string.format('%d  %s', place.count, label)
+    end
+    return table.concat(lines, '\n')
+end
+
 -- "East of Thais - Minotaur: 40, Minotaur Archer: 29" (every monster of the objective in that area, as the server
 -- merged them), "Dragon Lair (Venore) - Dragons: 23" (only the objective label), or just the name (an NPC, an area)
 function placeText(place, label)
@@ -138,7 +151,7 @@ function redrawPlaces()
     -- only what the journal asked to see ("Show on the map" or a place in Hints; user, 2026-10-26)
     if focus then
         for _, place in ipairs(focus.places) do
-            addOverlay(map, FOCUS_STYLE, place, placeText(place, focus.label),
+            addOverlay(map, FOCUS_STYLE, place, placeList(place, focus.label),
                 place.monsters and place.monsters[1] and place.monsters[1].name or focus.label or focus.quest)
         end
     end
