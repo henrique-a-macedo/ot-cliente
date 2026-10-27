@@ -32,22 +32,34 @@ function placeText(place)
     return place.name
 end
 
-local function clearFlag()
+-- the GPS's own flags: the widget it made is kept and destroyed itself (never a flag of the player on the same tile,
+-- and nothing to do if the player already deleted it with right click > Delete mark)
+local function addOwnFlag(position, icon, description)
     local map = findMinimap()
-    if map and flag then
-        map:removeFlag(flag)
+    if not map or map:getFlag(position) then
+        return nil
     end
-    flag = nil
+    map:addFlag(position, icon, description, true)
+    return map:getFlag(position)
+end
+
+local function removeOwnFlag(widget)
+    if widget and not widget:isDestroyed() then
+        widget:destroy()
+    end
+    return nil
+end
+
+local function clearFlag()
+    flag = removeOwnFlag(flag)
 end
 
 local function setFlag(place)
     clearFlag()
-    local map = findMinimap()
-    if not map or not place.marker then
+    if not place.marker then
         return
     end
-    flag = { x = place.marker.x, y = place.marker.y, z = place.marker.z }
-    map:addFlag(flag, FLAG_ICON[place.kind] or 2, place.name, true)
+    flag = addOwnFlag({ x = place.marker.x, y = place.marker.y, z = place.marker.z }, FLAG_ICON[place.kind] or 2, place.name)
 end
 
 -- the way to the marker, from the server ("route"): walk legs with points to follow and travel legs (a boat, a
@@ -178,16 +190,18 @@ function markUpcoming()
         end
     end
     local at = leg and leg.at
-    if stepFlag and at and stepFlag.x == at.x and stepFlag.y == at.y and stepFlag.z == at.z then
+    -- the same step: keep its flag (unless the player deleted it)
+    if stepFlag and at and stepFlag.at == at then
         return
     end
+    -- another step (or none): the flag of the passed one goes
     if stepFlag then
-        map:removeFlag(stepFlag)
+        removeOwnFlag(stepFlag.widget)
         stepFlag = nil
     end
     if at then
-        stepFlag = { x = at.x, y = at.y, z = at.z }
-        map:addFlag(stepFlag, STEP_ICON[leg.how] or 14, FLOOR_TEXT[leg.how] or tr('Change floor here'), true)
+        stepFlag = { at = at, widget = addOwnFlag({ x = at.x, y = at.y, z = at.z }, STEP_ICON[leg.how] or 14,
+            FLOOR_TEXT[leg.how] or tr('Change floor here')) }
     end
 end
 
