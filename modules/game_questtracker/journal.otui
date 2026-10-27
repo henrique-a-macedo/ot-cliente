@@ -96,12 +96,16 @@ MainWindow
   visible: false
   @onEscape: modules.game_questtracker.closeJournal()
 
+  // search and tag filter on one line, same height; the default combo box offset (-15) is made for 91 px
   TextEdit
     id: search
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: tagFilter.left
     margin-right: 8
+    height: 22
+    padding-left: 6
+    padding-top: 3
     placeholder: Search quests
     placeholder-color: #c0c0c0c0
 
@@ -109,7 +113,10 @@ MainWindow
     id: tagFilter
     anchors.top: parent.top
     anchors.right: parent.right
-    width: 120
+    size: 130 22
+    text-align: left
+    text-offset: 8 3
+    image-clip: 0 0 91 20
 
   JournalColumnTitle
     id: listTitle

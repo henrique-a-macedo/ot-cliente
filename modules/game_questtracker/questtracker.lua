@@ -300,7 +300,8 @@ local journal = nil
 local selected = nil
 local searchEvent = nil
 local searchText = ''
-local tagFilter = nil -- nil = every tag
+local tagFilter = nil   -- nil = every tag
+local stateFilter = nil -- nil = every state; 'active' (in progress, discovered) or 'done'
 local openClue = nil  -- index of the clue shown with its source
 
 local TAG_NAMES = { main = 'Main', league = 'Liga', mystery = 'Mystery' }
@@ -326,6 +327,11 @@ end
 
 -- the search looks at the name, the tags and the stage the player is on
 local function matches(view)
+    if stateFilter == 'done' and view.state ~= 'done' then
+        return false
+    elseif stateFilter == 'active' and view.state == 'done' then
+        return false
+    end
     if tagFilter then
         local has = false
         for _, tag in ipairs(view.tags or {}) do
@@ -523,7 +529,7 @@ local function drawList()
         end
     end
     if list:getChildCount() == 0 then
-        addText(list, 'JournalGroup', searchText ~= '' and tr('No quest matches.') or tr('No quests yet.'))
+        addText(list, 'JournalGroup', (searchText ~= '' or stateFilter or tagFilter) and tr('No quest matches.') or tr('No quests yet.'))
     end
     if focus then
         list:focusChild(focus, KeyboardFocusReason)
@@ -602,12 +608,16 @@ local function setupJournal()
     journal:hide()
     journal:getChildById('search').onTextChange = onSearchChange
     local filter = journal:getChildById('tagFilter')
+    -- one choice: every quest, by state (in progress, completed) or by tag
     filter:addOption(tr('All quests'), '')
+    filter:addOption(tr('In progress'), 'state:active')
+    filter:addOption(tr('Completed'), 'state:done')
     for _, tag in ipairs({ 'main', 'league', 'mystery' }) do
-        filter:addOption('[' .. TAG_NAMES[tag] .. ']', tag)
+        filter:addOption('[' .. TAG_NAMES[tag] .. ']', 'tag:' .. tag)
     end
     filter.onOptionChange = function(_, _, data)
-        tagFilter = data ~= '' and data or nil
+        stateFilter = data:match('^state:(.+)')
+        tagFilter = data:match('^tag:(.+)')
         drawJournal()
     end
     journal:getChildById('autoTrackCheck').onCheckChange = function(widget, checked)
