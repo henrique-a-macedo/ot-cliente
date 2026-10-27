@@ -115,8 +115,15 @@ local function aim(position)
             end
         else
             local points = leg.points or {}
-            while points[route.point] and points[route.point].z == position.z and
-                    chebyshev(position, points[route.point]) <= POINT_REACHED do
+            -- a point is passed when the player is near it, or when the next one is already nearer: the points are the
+            -- middles of the pieces of the way, and walking through a piece seldom touches its middle
+            while points[route.point] and points[route.point].z == position.z do
+                local here, after = points[route.point], points[route.point + 1]
+                local passed = chebyshev(position, here) <= POINT_REACHED or
+                    (after and after.z == position.z and chebyshev(position, after) <= chebyshev(position, here))
+                if not passed then
+                    break
+                end
                 route.point = route.point + 1
             end
             if points[route.point] then
