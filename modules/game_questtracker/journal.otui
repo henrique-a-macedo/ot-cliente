@@ -1,4 +1,7 @@
-// the quest journal: every quest with stages, grouped (in progress, available, done), and the selected one in detail
+// the quest journal (design/quest-tracker.md, 12.6): search on top, then three tabs.
+// Lista = every quest, grouped (in progress, available, done), with tags and a tag filter
+// Info  = the selected quest: description, rewards, stages done and the current one
+// Hint  = where to go (places, clickable: the full map shows them) and the clues found (click: where it came from)
 JournalGroup < Label
   height: 18
   margin-top: 6
@@ -44,10 +47,48 @@ JournalTitle < Label
   color: #ffffff
   text-auto-resize: true
 
+// a place or a clue: clicking does something
+JournalLink < Label
+  margin-top: 2
+  padding-left: 8
+  color: #8fc4ff
+  text-wrap: true
+  text-auto-resize: true
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover:
+    color: #c4e0ff
+
+JournalTab < TabButton
+  width: 90
+  height: 23
+
+JournalPanel < ScrollablePanel
+  anchors.top: tabs.bottom
+  anchors.left: parent.left
+  anchors.right: parent.right
+  anchors.bottom: trackCheck.top
+  margin-top: 6
+  margin-bottom: 8
+  margin-right: 18
+  layout:
+    type: verticalBox
+
+// one per tab, anchored to the window (a scroll bar anchored to its own panel looped and closed the client)
+JournalScroll < VerticalScrollBar
+  anchors.top: tabs.bottom
+  anchors.bottom: trackCheck.top
+  anchors.right: parent.right
+  margin-top: 6
+  margin-bottom: 8
+  step: 16
+  pixels-scroll: true
+
 MainWindow
   id: questJournal
   !text: tr('Quest Journal')
-  size: 640 440
+  size: 560 470
   visible: false
   @onEscape: modules.game_questtracker.closeJournal()
 
@@ -55,57 +96,83 @@ MainWindow
     id: search
     anchors.top: parent.top
     anchors.left: parent.left
-    width: 210
-    placeholder: Search
+    anchors.right: tagFilter.left
+    margin-right: 8
+    placeholder: Search quests
     placeholder-color: #c0c0c0c0
+
+  ComboBox
+    id: tagFilter
+    anchors.top: parent.top
+    anchors.right: parent.right
+    width: 110
+
+  Panel
+    id: tabs
+    anchors.top: search.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 8
+    height: 23
+    layout:
+      type: horizontalBox
+      spacing: 4
+
+    JournalTab
+      id: listTab
+      !text: tr('List')
+      @onClick: modules.game_questtracker.showTab('list')
+
+    JournalTab
+      id: infoTab
+      !text: tr('Info')
+      @onClick: modules.game_questtracker.showTab('info')
+
+    JournalTab
+      id: hintTab
+      !text: tr('Hint')
+      @onClick: modules.game_questtracker.showTab('hint')
 
   TextList
     id: questList
-    vertical-scrollbar: questListScroll
-    anchors.top: search.bottom
+    vertical-scrollbar: listScroll
+    anchors.top: tabs.bottom
     anchors.left: parent.left
-    anchors.bottom: closeButton.top
+    anchors.right: parent.right
+    anchors.bottom: trackCheck.top
     margin-top: 6
-    margin-bottom: 10
+    margin-bottom: 8
+    margin-right: 18
     padding: 2
-    width: 210
     focusable: false
 
-  VerticalScrollBar
-    id: questListScroll
-    anchors.top: questList.top
-    anchors.bottom: questList.bottom
-    anchors.right: questList.right
-    step: 16
-    pixels-scroll: true
+  JournalScroll
+    id: listScroll
 
-  ScrollablePanel
-    id: detail
-    anchors.top: parent.top
-    anchors.left: questList.right
-    anchors.right: detailScroll.left
-    anchors.bottom: questList.bottom
-    margin-left: 12
-    margin-right: 4
-    vertical-scrollbar: detailScroll
-    layout:
-      type: verticalBox
+  JournalPanel
+    id: info
+    vertical-scrollbar: infoScroll
+    visible: false
 
-  // anchored to the window, not to `detail` (which anchors to it): a loop here closed the client
-  VerticalScrollBar
-    id: detailScroll
-    anchors.top: parent.top
-    anchors.bottom: questList.bottom
-    anchors.right: parent.right
-    step: 16
-    pixels-scroll: true
+  JournalScroll
+    id: infoScroll
+    visible: false
+
+  JournalPanel
+    id: hint
+    vertical-scrollbar: hintScroll
+    visible: false
+
+  JournalScroll
+    id: hintScroll
+    visible: false
 
   CheckBox
     id: trackCheck
     !text: tr('Track this quest')
-    anchors.left: detail.left
+    anchors.left: parent.left
     anchors.bottom: parent.bottom
-    width: 140
+    width: 130
     @onCheckChange: modules.game_questtracker.onTrackCheck(self:isChecked())
 
   CheckBox
@@ -113,9 +180,16 @@ MainWindow
     !text: tr('Track new quests')
     anchors.left: trackCheck.right
     anchors.bottom: parent.bottom
-    margin-left: 12
-    width: 140
-    @onCheckChange: modules.game_questtracker.setAutoTrack(self:isChecked())
+    margin-left: 10
+    width: 130
+
+  CheckBox
+    id: showPlacesCheck
+    !text: tr('Places on map')
+    anchors.left: autoTrackCheck.right
+    anchors.bottom: parent.bottom
+    margin-left: 10
+    width: 120
 
   Button
     id: closeButton

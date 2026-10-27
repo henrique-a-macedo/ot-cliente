@@ -2,8 +2,9 @@
 -- arch .claude/ref/design/quest-tracker.md). The server sends the quests ("list" when asked with "open", "update"
 -- when one changes); this module keeps them and which ones are tracked, per character. A view says what to do, never
 -- how: a hidden objective comes without its label. Collect objectives are counted here from the backpack so the
--- number moves live; the server checks the real count at the hand-in.
-local OPCODE = 126
+-- number moves live; the server checks the real count at the hand-in. Version 2 (section 12): tags, mystery quests
+-- (only what the player already did and the clues found), places on the map (questmap.lua).
+OPCODE = 126
 local TRACKED_NODE = 'QuestTrackerTracked'
 -- the server answers the first "open" only after it sent opcode 0 at login
 local OPEN_DELAY = 1500
@@ -17,7 +18,7 @@ local countEvent = nil
 local function characterSettings()
     local all = g_settings.getNode(TRACKED_NODE) or {}
     local own = all[g_game.getCharacterName()] or {}
-    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false }
+    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false, showPlaces = own.showPlaces ~= false }
 end
 
 local function saveSettings()
@@ -58,6 +59,19 @@ function setAutoTrack(on)
     if settings then
         settings.autoTrack = on
         saveSettings()
+    end
+end
+
+-- quest places on the map (option "Places on map", per character)
+function showsPlaces()
+    return settings ~= nil and settings.showPlaces
+end
+
+function setShowPlaces(on)
+    if settings then
+        settings.showPlaces = on
+        saveSettings()
+        redrawPlaces()
     end
 end
 
@@ -155,6 +169,8 @@ local function onMessage(protocol, opcode, data)
         end
         signalcall(onQuestUpdate, before, view)
         changed(view.id)
+    elseif data.action == 'places' then
+        onPlacesMessage(data)
     end
 end
 
@@ -204,6 +220,11 @@ local function drawMini()
                 menu:display(mousePos)
                 return true
             end
+            if view.mystery and view.stage then
+                local line = g_ui.createWidget('QuestMiniObjective', list)
+                line:setText(view.stage.text)
+                line:setColor('#a0a0c0')
+            end
             for _, objective in ipairs(view.stage and view.stage.objectives or {}) do
                 local line = g_ui.createWidget('QuestMiniObjective', list)
                 local current, target = objectiveCount(objective)
@@ -228,7 +249,10 @@ onQuestUpdate = function(before, after)
     elseif after.state == 'active' and (not before or before.state ~= 'active') then
         message = tr('Quest started: %s', after.name)
     elseif after.stage and before and before.stage and after.stage.index ~= before.stage.index then
-        message = tr('Quest updated: %s - %s', after.name, after.stage.title)
+        message = after.stage.title ~= '' and tr('Quest updated: %s - %s', after.name, after.stage.title) or
+            tr('Quest updated: %s', after.name)
+    elseif after.state == 'discovered' and not before then
+        message = tr('Quest discovered: %s', after.name)
     end
     if message and modules.game_textmessage then
         modules.game_textmessage.displayGameMessage(message)
@@ -267,11 +291,20 @@ function toggleMini()
 end
 
 -- journal ---------------------------------------------------------------------------------------------------------
+-- Search on top (typing filters the list, 1 s after the last key), a tag filter, and three tabs: List, Info, Hint.
+local SEARCH_DEBOUNCE = 1000
 local journal = nil
 local selected = nil
+local tab = 'list'
+local searchEvent = nil
+local searchText = ''
+local tagFilter = nil -- nil = every tag
+local openClue = nil  -- index of the clue shown with its source
+
+local TAG_NAMES = { main = 'Main', league = 'Liga', mystery = 'Mystery' }
 
 local GROUPS = {
-    { title = 'In progress', states = { active = true } },
+    { title = 'In progress', states = { active = true, discovered = true } },
     { title = 'Available', states = { available = true, locked = true } },
     { title = 'Done', states = { done = true } }
 }
@@ -282,79 +315,202 @@ local function addText(parent, style, text)
     return label
 end
 
-local function showDetail(id)
-    selected = id
-    local detail = journal:getChildById('detail')
-    detail:destroyChildren()
-    local view = id and quests[id]
+local function tagText(view)
+    local parts = {}
+    for _, tag in ipairs(view.tags or {}) do
+        parts[#parts + 1] = '[' .. (TAG_NAMES[tag] or tag) .. ']'
+    end
+    return table.concat(parts, ' ')
+end
+
+-- the search looks at the name, the tags and the stage the player is on
+local function matches(view)
+    if tagFilter then
+        local has = false
+        for _, tag in ipairs(view.tags or {}) do
+            has = has or tag == tagFilter
+        end
+        if not has then
+            return false
+        end
+    end
+    if searchText == '' then
+        return true
+    end
+    local haystack = (view.name .. ' ' .. tagText(view) .. ' ' .. (view.stage and view.stage.title or '')):lower()
+    return haystack:find(searchText, 1, true) ~= nil
+end
+
+local function selectedView()
+    return selected and quests[selected]
+end
+
+local function updateTrackCheck()
+    local view = selectedView()
     local trackCheck = journal:getChildById('trackCheck')
     trackCheck.updating = true
-    trackCheck:setChecked(view ~= nil and isTracked(id))
+    trackCheck:setChecked(view ~= nil and isTracked(selected))
     trackCheck:setEnabled(view ~= nil and view.state == 'active')
     trackCheck.updating = false
+end
+
+local function drawInfo()
+    local panel = journal:getChildById('info')
+    panel:destroyChildren()
+    local view = selectedView()
     if not view then
-        addText(detail, 'JournalText', tr('Pick a quest on the left.'))
+        addText(panel, 'JournalText', tr('Pick a quest in the list.'))
         return
     end
-    addText(detail, 'JournalTitle', view.name)
+    addText(panel, 'JournalTitle', view.name)
+    local tags = tagText(view)
+    if tags ~= '' then
+        addText(panel, 'JournalText', tags):setColor('#e8c46a')
+    end
     if view.state == 'locked' then
-        addText(detail, 'JournalText', tr('Not available yet: %s', view.reason or '?')):setColor('#c08060')
+        addText(panel, 'JournalText', tr('Not available yet: %s', view.reason or '?')):setColor('#c08060')
     elseif view.state == 'done' then
-        addText(detail, 'JournalText', tr('Completed.')):setColor('#7fbf6f')
+        addText(panel, 'JournalText', tr('Completed.')):setColor('#7fbf6f')
     end
     if view.description ~= '' then
-        addText(detail, 'JournalText', view.description)
+        addText(panel, 'JournalText', view.description)
     end
     if view.start ~= '' and (view.state == 'available' or view.state == 'locked') then
-        addText(detail, 'JournalHeading', tr('Where it starts'))
-        addText(detail, 'JournalText', view.start)
+        addText(panel, 'JournalHeading', tr('Where it starts'))
+        addText(panel, 'JournalText', view.start)
     end
     if #view.done > 0 then
-        addText(detail, 'JournalHeading', tr('Done'))
-        addText(detail, 'JournalText', table.concat(view.done, ', '))
+        addText(panel, 'JournalHeading', tr('Done'))
+        for _, title in ipairs(view.done) do
+            addText(panel, 'JournalText', '- ' .. title):setColor('#7fbf6f')
+        end
     end
     if view.stage then
-        addText(detail, 'JournalHeading', tr('Now (%d of %d): %s', view.stage.index, view.stage.count, view.stage.title))
+        if view.mystery then
+            addText(panel, 'JournalHeading', tr('Now'))
+        else
+            addText(panel, 'JournalHeading', tr('Now (%d of %d): %s', view.stage.index, view.stage.count, view.stage.title))
+        end
         if view.stage.text ~= '' then
-            addText(detail, 'JournalText', view.stage.text)
+            addText(panel, 'JournalText', view.stage.text)
         end
         for _, objective in ipairs(view.stage.objectives) do
             local current, target = objectiveCount(objective)
-            local line = addText(detail, 'JournalText', '- ' .. objectiveText(objective))
+            local line = addText(panel, 'JournalText', '- ' .. objectiveText(objective))
             if current >= target then
                 line:setColor('#7fbf6f')
             end
         end
         if #view.rewards > 0 then
-            addText(detail, 'JournalHeading', tr('Reward for this step'))
-            addText(detail, 'JournalText', table.concat(view.rewards, ', '))
+            addText(panel, 'JournalHeading', tr('Reward for this step'))
+            addText(panel, 'JournalText', table.concat(view.rewards, ', '))
         end
     end
-    if #view.final > 0 and view.state ~= 'done' then
-        addText(detail, 'JournalHeading', tr('Final reward'))
-        addText(detail, 'JournalText', table.concat(view.final, ', '))
+    if #view.final > 0 then
+        addText(panel, 'JournalHeading', view.state == 'done' and tr('Reward') or tr('Final reward'))
+        addText(panel, 'JournalText', table.concat(view.final, ', '))
     end
 end
 
-local function drawJournal()
-    if not journal or not journal:isVisible() then
+local function addPlaceLinks(panel, view, objectiveIndex, places, label, more)
+    for _, place in ipairs(places) do
+        local link = addText(panel, 'JournalLink', placeText(place, label))
+        link.onClick = function()
+            showPlaces(view.id, objectiveIndex, places, place, label, more)
+        end
+    end
+    if #places > 1 or more then
+        local all = addText(panel, 'JournalLink', more and tr('Show all on the map...') or tr('Show all on the map'))
+        all.onClick = function()
+            showPlaces(view.id, objectiveIndex, places, places[1], label, more)
+        end
+    end
+end
+
+local function drawHint()
+    local panel = journal:getChildById('hint')
+    panel:destroyChildren()
+    local view = selectedView()
+    if not view then
+        addText(panel, 'JournalText', tr('Pick a quest in the list.'))
         return
     end
+    addText(panel, 'JournalTitle', view.name)
+    local any = false
+    if not view.mystery then
+        if (view.state == 'available' or view.state == 'locked') and view.startPlaces and #view.startPlaces > 0 then
+            any = true
+            addText(panel, 'JournalHeading', tr('Where it starts'))
+            addPlaceLinks(panel, view, nil, view.startPlaces, nil, false)
+        end
+        for index, objective in ipairs(view.stage and view.stage.objectives or {}) do
+            if objective.places and #objective.places > 0 then
+                any = true
+                addText(panel, 'JournalHeading', objectiveText(objective))
+                addPlaceLinks(panel, view, index, objective.places, objective.label, objective.morePlaces)
+            end
+        end
+        if view.stage and view.stage.places and #view.stage.places > 0 then
+            any = true
+            addText(panel, 'JournalHeading', tr('Places'))
+            addPlaceLinks(panel, view, nil, view.stage.places, nil, false)
+        end
+    end
+    if view.clues and #view.clues > 0 then
+        any = true
+        addText(panel, 'JournalHeading', tr('Clues found'))
+        for index, clue in ipairs(view.clues) do
+            local link = addText(panel, 'JournalLink', clue.title ~= '' and clue.title or clue.text)
+            link.onClick = function()
+                openClue = openClue ~= index and index or nil
+                drawHint()
+            end
+            if openClue == index then
+                if clue.title ~= '' then
+                    addText(panel, 'JournalText', clue.text)
+                end
+                local source = clue.source or {}
+                if source.dialog then
+                    addText(panel, 'JournalText', tr('From %s:', source.npc or '?')):setColor('#e8c46a')
+                    for _, line in ipairs(source.dialog) do
+                        addText(panel, 'JournalText', line):setColor('#a0a0c0')
+                    end
+                elseif source.text then
+                    addText(panel, 'JournalText', source.text):setColor('#a0a0c0')
+                end
+            end
+        end
+    end
+    if not any then
+        addText(panel, 'JournalText', view.mystery and tr('No clues yet. Talk to people, look around.') or
+            tr('Nothing to show on the map for this step.'))
+    end
+end
+
+local function drawList()
     local list = journal:getChildById('questList')
-    local filter = journal:getChildById('search'):getText():lower()
-    list.onChildFocusChange = nil
     list:destroyChildren()
     local focus = nil
     for _, group in ipairs(GROUPS) do
         local header = nil
         for _, id in ipairs(questOrder) do
             local view = quests[id]
-            if view and group.states[view.state] and (filter == '' or view.name:lower():find(filter, 1, true)) then
+            if view and group.states[view.state] and matches(view) then
                 if not header then
                     header = addText(list, 'JournalGroup', tr(group.title))
                 end
-                local row = addText(list, 'JournalQuest', view.name)
+                local tags = tagText(view)
+                local row = addText(list, 'JournalQuest', tags ~= '' and (tags .. ' ' .. view.name) or view.name)
                 row.questId = id
+                -- picking a quest opens its Info
+                row.onClick = function()
+                    if selected ~= id then
+                        openClue = nil
+                        clearPlacesFocus()
+                    end
+                    selected = id
+                    showTab('info')
+                end
                 if view.state == 'locked' then
                     row:setColor('#808080')
                     row:setTooltip(view.reason)
@@ -366,31 +522,78 @@ local function drawJournal()
         end
     end
     if list:getChildCount() == 0 then
-        addText(list, 'JournalGroup', tr('No quests yet.'))
+        addText(list, 'JournalGroup', searchText ~= '' and tr('No quest matches.') or tr('No quests yet.'))
     end
     if focus then
         list:focusChild(focus, KeyboardFocusReason)
     end
-    list.onChildFocusChange = function(_, child)
-        if child and child.questId then
-            showDetail(child.questId)
-        end
+end
+
+local TABS = {
+    list = { button = 'listTab', widget = 'questList', scroll = 'listScroll' },
+    info = { button = 'infoTab', widget = 'info', scroll = 'infoScroll' },
+    hint = { button = 'hintTab', widget = 'hint', scroll = 'hintScroll' }
+}
+
+local function drawJournal()
+    if not journal or not journal:isVisible() then
+        return
     end
-    showDetail(selected)
+    updateTrackCheck()
+    if tab == 'list' then
+        drawList()
+    elseif tab == 'info' then
+        drawInfo()
+    else
+        drawHint()
+    end
+end
+
+function showTab(name)
+    if not journal or not TABS[name] then
+        return
+    end
+    tab = name
+    for key, entry in pairs(TABS) do
+        local on = key == name
+        journal:getChildById(entry.button):setOn(on)
+        journal:getChildById(entry.widget):setVisible(on)
+        journal:getChildById(entry.scroll):setVisible(on)
+    end
+    drawJournal()
+end
+
+local function onSearchChange(widget, text)
+    if searchEvent then
+        removeEvent(searchEvent)
+    end
+    searchEvent = scheduleEvent(function()
+        searchEvent = nil
+        searchText = text:lower()
+        if tab ~= 'list' then
+            showTab('list')
+        else
+            drawJournal()
+        end
+    end, SEARCH_DEBOUNCE)
 end
 
 function openJournal(id)
     if not journal then
         return
     end
-    if id then
-        selected = id
-    end
     journal:getChildById('autoTrackCheck'):setChecked(isAutoTrack())
+    journal:getChildById('showPlacesCheck'):setChecked(showsPlaces())
     journal:show()
     journal:raise()
     journal:focus()
-    drawJournal()
+    if id then
+        selected = id
+        openClue = nil
+        showTab('info')
+    else
+        showTab(tab)
+    end
     requestList()
 end
 
@@ -407,6 +610,33 @@ function onTrackCheck(checked)
     end
 end
 
+local function setupJournal()
+    journal = g_ui.displayUI('journal')
+    journal:hide()
+    journal:getChildById('search').onTextChange = onSearchChange
+    local filter = journal:getChildById('tagFilter')
+    filter:addOption(tr('All quests'), '')
+    for _, tag in ipairs({ 'main', 'league', 'mystery' }) do
+        filter:addOption('[' .. TAG_NAMES[tag] .. ']', tag)
+    end
+    filter.onOptionChange = function(_, _, data)
+        tagFilter = data ~= '' and data or nil
+        if tab ~= 'list' then
+            showTab('list')
+        else
+            drawJournal()
+        end
+    end
+    journal:getChildById('autoTrackCheck').onCheckChange = function(widget, checked)
+        setAutoTrack(checked)
+    end
+    journal:getChildById('showPlacesCheck').onCheckChange = function(widget, checked)
+        if checked ~= showsPlaces() then
+            setShowPlaces(checked)
+        end
+    end
+end
+
 local function onGameStart()
     settings = characterSettings()
     quests, questOrder = {}, {}
@@ -417,6 +647,7 @@ end
 
 local function onGameEnd()
     closeJournal()
+    clearPlacesFocus()
     settings = nil
     quests, questOrder = {}, {}
     changed(nil)
@@ -434,11 +665,8 @@ function init()
     end
     miniButton = modules.game_mainpanel.addToggleButton('questTrackerButton', tr('Quest Tracker'),
         '/images/options/button_questlog_tracker', toggleMini, false, 1001)
-    journal = g_ui.displayUI('journal')
-    journal:hide()
-    journal:getChildById('search').onTextChange = function()
-        drawJournal()
-    end
+    setupJournal()
+    initPlaces()
     -- the mini window's menu button: the journal and the auto-track option
     local menuButton = miniWindow:recursiveGetChildById('contextMenuButton')
     if menuButton then
@@ -452,6 +680,9 @@ function init()
             menu:addCheckBox(tr('Track new quests'), isAutoTrack(), function(_, checked)
                 setAutoTrack(checked)
             end)
+            menu:addCheckBox(tr('Quest places on the map'), showsPlaces(), function(_, checked)
+                setShowPlaces(checked)
+            end)
             menu:display(mousePos)
             return true
         end
@@ -459,6 +690,7 @@ function init()
     onChange(function()
         drawMini()
         drawJournal()
+        scheduleRedrawPlaces()
     end)
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onMessage)
     connect(g_game, { onGameStart = onGameStart, onGameEnd = onGameEnd })
@@ -480,6 +712,11 @@ function terminate()
         removeEvent(countEvent)
         countEvent = nil
     end
+    if searchEvent then
+        removeEvent(searchEvent)
+        searchEvent = nil
+    end
+    terminatePlaces()
     if miniButton then
         miniButton:destroy()
         miniButton = nil
