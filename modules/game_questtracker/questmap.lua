@@ -95,10 +95,17 @@ local function addOverlay(map, style, place, text, group)
     overlays[#overlays + 1] = widget
 end
 
--- "Dragon Lair (Venore) - 23 dragons"
+-- "East of Thais - Minotaur: 40, Minotaur Archer: 29" (every monster of the objective in that area, as the server
+-- merged them), "Dragon Lair (Venore) - Dragons: 23" (only the objective label), or just the name (an NPC, an area)
 function placeText(place, label)
-    if place.count and label then
-        return string.format('%s - %d %s', place.name, place.count, place.monster or label)
+    if place.monsters and #place.monsters > 0 then
+        local parts = {}
+        for _, monster in ipairs(place.monsters) do
+            parts[#parts + 1] = string.format('%s: %d', monster.name or label or '?', monster.count or 0)
+        end
+        return place.name .. ' - ' .. table.concat(parts, ', ')
+    elseif place.count and label then
+        return string.format('%s - %s: %d', place.name, label, place.count)
     end
     return place.name
 end
@@ -132,7 +139,7 @@ function redrawPlaces()
     if focus then
         for _, place in ipairs(focus.places) do
             addOverlay(map, FOCUS_STYLE, place, placeText(place, focus.label),
-                place.monster or focus.label or focus.quest)
+                place.monsters and place.monsters[1] and place.monsters[1].name or focus.label or focus.quest)
         end
     end
 end

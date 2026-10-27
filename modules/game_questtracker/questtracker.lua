@@ -6,8 +6,10 @@
 -- (only what the player already did and the clues found), places on the map (questmap.lua).
 OPCODE = 126
 local TRACKED_NODE = 'QuestTrackerTracked'
--- the server answers the first "open" only after it sent opcode 0 at login
+-- the server sends the list at login by itself; "open" after this delay only if it did not arrive (the client may
+-- send only after the server's opcode 0)
 local OPEN_DELAY = 1500
+local listReceived = false
 
 quests = {}       -- id -> view from the server
 questOrder = {}   -- ids in the server's order
@@ -145,6 +147,7 @@ local function onMessage(protocol, opcode, data)
         return
     end
     if data.action == 'list' then
+        listReceived = true
         -- the list comes in parts (the server limits a message to 8 KB): the first starts over, the last redraws
         if data.first ~= false then
             quests, questOrder = {}, {}
@@ -657,7 +660,12 @@ local function onGameStart()
     quests, questOrder = {}, {}
     miniWindow:setupOnStart() -- place, size, minimized and closed per character
     drawMini()
-    scheduleEvent(requestList, OPEN_DELAY)
+    listReceived = false
+    scheduleEvent(function()
+        if not listReceived then
+            requestList()
+        end
+    end, OPEN_DELAY)
 end
 
 local function onGameEnd()
