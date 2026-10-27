@@ -262,7 +262,16 @@ local function updateGps()
     markUpcoming()
 end
 
+-- the player turns the GPS off (the button, the name, the x): it stays off at the next login
 function stopGuide()
+    endGuide()
+    if setGuidedSetting then
+        setGuidedSetting(nil)
+    end
+end
+
+-- the GPS stops without forgetting (logout, the quest done, arrived)
+function endGuide()
     target = nil
     route = nil
     markUpcoming()
@@ -290,9 +299,12 @@ function guideTo(questId, place)
     if not place or not place.marker then
         return
     end
-    stopGuide()
+    endGuide()
     target = { quest = questId, place = place }
     setFlag(place)
+    if setGuidedSetting then
+        setGuidedSetting(questId)
+    end
     if not gps then
         local panel = modules.game_interface.getRootPanel()
         if not panel then
@@ -380,7 +392,7 @@ function initPlaces()
 end
 
 function terminatePlaces()
-    stopGuide()
+    endGuide()
     if gps then
         gps:destroy()
         gps = nil

@@ -27,6 +27,16 @@ local function saveSettings()
     local all = g_settings.getNode(TRACKED_NODE) or {}
     all[g_game.getCharacterName()] = settings
     g_settings.setNode(TRACKED_NODE, all)
+    -- written at once: a client that does not close cleanly would lose it
+    g_settings.save()
+end
+
+-- the quest the GPS follows, per character: on again at the next login (nil = none)
+function setGuidedSetting(id)
+    if settings and settings.guide ~= id then
+        settings.guide = id
+        saveSettings()
+    end
 end
 
 -- callbacks function(id) (id nil: everything changed)
@@ -157,6 +167,14 @@ local function onMessage(protocol, opcode, data)
         end
         if data.last ~= false then
             changed(nil)
+            -- the GPS of the last session: on again if that quest is still in progress
+            if settings.guide and not guidedQuest() then
+                local view = quests[settings.guide]
+                local place = view and view.state == 'active' and nearestPlaceOf(view)
+                if place then
+                    guideTo(settings.guide, place)
+                end
+            end
         end
     elseif data.action == 'update' and type(data.quest) == 'table' then
         local view = data.quest
@@ -690,6 +708,8 @@ local function onGameStart()
 end
 
 local function onGameEnd()
+    -- the arrow goes with the character; the quest it followed stays saved for the next login
+    endGuide()
     closeJournal()
     clearPlacesFocus()
     settings = nil

@@ -382,6 +382,10 @@ function toggleChat()
     end
 
     updateChatMode()
+    -- kept at once (and written to disk): onTerminate alone lost it whenever the client did not close cleanly, and
+    -- the next login came back to Chat On
+    save()
+    g_settings.save()
 end
 
 -- id of object first and then action
