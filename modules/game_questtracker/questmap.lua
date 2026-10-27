@@ -50,7 +50,73 @@ local function setFlag(place)
     map:addFlag(flag, FLAG_ICON[place.kind] or 2, place.name, true)
 end
 
--- the arrow: rotated towards the marker (0 = north, clockwise), the name and the squares to go
+-- the way to the marker, from the server ("route"): walk legs with points to follow and travel legs (a boat, a
+-- carpet: an NPC and what to say). Without a way, the arrow points straight at the marker.
+local POINT_REACHED = 5   -- squares from a walk point that count as reached
+local TRAVELLED = 12      -- squares from where a trip lands that count as having travelled
+local OFF_ROUTE = 60      -- farther than this from the point to follow: ask for a new way
+local JUMP = 30           -- a move this long between two looks is a trip or a teleport: ask for a new way
+local ROUTE_AGAIN = 3000  -- no sooner than this between two asks
+
+local route = nil         -- { legs, leg, point }
+local lastAsk = 0
+local lastPosition = nil
+
+local function chebyshev(a, b)
+    return math.max(math.abs(a.x - b.x), math.abs(a.y - b.y))
+end
+
+local function askRoute()
+    if not target or g_clock.millis() - lastAsk < ROUTE_AGAIN then
+        return
+    end
+    lastAsk = g_clock.millis()
+    local protocol = g_game.getProtocolGame()
+    local marker = target.place.marker
+    if protocol then
+        protocol:sendExtendedOpcode(OPCODE, string.format('route %d %d %d', marker.x, marker.y, marker.z))
+    end
+end
+
+-- answer to "route": the legs to follow (nil: no way, the arrow points straight)
+function onRouteMessage(data)
+    local marker = target and target.place.marker
+    if not marker or type(data.target) ~= 'table' or data.target.x ~= marker.x or data.target.y ~= marker.y then
+        return
+    end
+    route = type(data.legs) == 'table' and #data.legs > 0 and { legs = data.legs, leg = 1, point = 1 } or nil
+end
+
+-- where the arrow points now and what it says: the next point of the walk, the NPC of the trip, or the marker
+local function aim(position)
+    local marker = target.place.marker
+    while route and route.legs[route.leg] do
+        local leg = route.legs[route.leg]
+        if leg.kind == 'travel' then
+            if chebyshev(position, leg.to) <= TRAVELLED then
+                route.leg, route.point = route.leg + 1, 1
+            else
+                return leg.at, tr('Travel: ask %s for "%s"', leg.npc, leg.keyword)
+            end
+        else
+            local points = leg.points or {}
+            while points[route.point] and chebyshev(position, points[route.point]) <= POINT_REACHED do
+                route.point = route.point + 1
+            end
+            if points[route.point] then
+                if chebyshev(position, points[route.point]) > OFF_ROUTE then
+                    askRoute()
+                end
+                -- the last walk goes straight to the marker once its points are done
+                return points[route.point], nil
+            end
+            route.leg, route.point = route.leg + 1, 1
+        end
+    end
+    return marker, nil
+end
+
+-- the arrow: rotated towards where to go now (0 = north, clockwise), the place, the squares and the instruction
 local function updateGps()
     if not gps or not target then
         return
@@ -61,10 +127,14 @@ local function updateGps()
     if not position or not marker then
         return
     end
-    local dx, dy = marker.x - position.x, marker.y - position.y
-    local distance = math.max(math.abs(dx), math.abs(dy))
+    -- a trip or a teleport: the way from here
+    if lastPosition and (chebyshev(position, lastPosition) > JUMP or position.z ~= lastPosition.z and not route) then
+        askRoute()
+    end
+    lastPosition = { x = position.x, y = position.y, z = position.z }
     local arrow = gps:getChildById('arrow')
     local text = gps:getChildById('text')
+    local distance = chebyshev(position, marker)
     if distance <= ARRIVED and position.z == marker.z then
         arrow:setRotation(0)
         arrow:setVisible(false)
@@ -77,19 +147,30 @@ local function updateGps()
         end
         return
     end
+    local goal, instruction = aim(position)
+    local dx, dy = goal.x - position.x, goal.y - position.y
     arrow:setVisible(true)
     arrow:setRotation(math.deg((math.atan2 or math.atan)(dx, -dy)))
     local floors = ''
-    if position.z > marker.z then
+    if goal == marker and position.z > marker.z then
         floors = ' ' .. tr('(go up)')
-    elseif position.z < marker.z then
+    elseif goal == marker and position.z < marker.z then
         floors = ' ' .. tr('(go down)')
     end
-    text:setText(string.format('%s\n%d %s%s', target.place.name, distance, tr('sqm'), floors))
+    local lines = { target.place.name }
+    if instruction then
+        lines[#lines + 1] = instruction
+        lines[#lines + 1] = string.format('%d %s', chebyshev(position, goal), tr('sqm'))
+    else
+        lines[#lines + 1] = string.format('%d %s%s', distance, tr('sqm'), floors)
+    end
+    text:setText(table.concat(lines, '\n'))
 end
 
 function stopGuide()
     target = nil
+    route = nil
+    lastPosition = nil
     clearFlag()
     if gpsEvent then
         removeEvent(gpsEvent)
@@ -125,6 +206,8 @@ function guideTo(questId, place)
     end
     gps:show()
     gps:raise()
+    lastAsk = 0
+    askRoute()
     updateGps()
     gpsEvent = cycleEvent(updateGps, GPS_INTERVAL)
     if refreshMini then

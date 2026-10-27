@@ -1,6 +1,6 @@
 // the quest GPS (questmap.lua): at the top of the game screen, an arrow towards the marker, the place and the squares
 QuestGps < UIWidget
-  size: 230 40
+  size: 260 52
   anchors.top: parent.top
   anchors.horizontalCenter: parent.horizontalCenter
   margin-top: 40

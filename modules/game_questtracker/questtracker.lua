@@ -174,6 +174,8 @@ local function onMessage(protocol, opcode, data)
         onPlacesMessage(data)
     elseif data.action == 'mapplaces' then
         onMapPlaces(data)
+    elseif data.action == 'route' then
+        onRouteMessage(data)
     end
 end
 
