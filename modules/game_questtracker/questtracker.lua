@@ -301,7 +301,7 @@ local selected = nil
 local searchEvent = nil
 local searchText = ''
 local tagFilter = nil   -- nil = every tag
-local stateFilter = nil -- nil = every state; 'active' (in progress, discovered) or 'done'
+local stateFilter = 'active' -- nil = every state; 'active' (in progress, discovered, the default) or 'done'
 local openClue = nil  -- index of the clue shown with its source
 
 local TAG_NAMES = { main = 'Main', league = 'Liga', mystery = 'Mystery' }
@@ -620,9 +620,10 @@ local function setupJournal()
         drawJournal()
     end
     local states = journal:getChildById('stateFilter')
-    states:addOption(tr('All quests'), '')
+    -- in progress first, and the default (user, 2026-10-26)
     states:addOption(tr('In progress'), 'active')
     states:addOption(tr('Completed'), 'done')
+    states:addOption(tr('All quests'), '')
     states.onOptionChange = function(_, _, data)
         stateFilter = data ~= '' and data or nil
         drawJournal()
