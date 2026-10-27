@@ -292,11 +292,12 @@ function toggleMini()
 end
 
 -- journal ---------------------------------------------------------------------------------------------------------
--- Search on top (typing filters the list, 1 s after the last key), a tag filter, and three tabs: List, Info, Hint.
+-- Search on top (typing filters the list, 1 s after the last key), a tag filter, and one screen with three columns:
+-- Quest List | Info | Hints. The list is the player's own quests: the server sends no other (the ones he can take go
+-- only as a "!" on the map).
 local SEARCH_DEBOUNCE = 1000
 local journal = nil
 local selected = nil
-local tab = 'list'
 local searchEvent = nil
 local searchText = ''
 local tagFilter = nil -- nil = every tag
@@ -306,7 +307,6 @@ local TAG_NAMES = { main = 'Main', league = 'Liga', mystery = 'Mystery' }
 
 local GROUPS = {
     { title = 'In progress', states = { active = true, discovered = true } },
-    { title = 'Available', states = { available = true, locked = true } },
     { title = 'Done', states = { done = true } }
 }
 
@@ -503,18 +503,18 @@ local function drawList()
                 local tags = tagText(view)
                 local row = addText(list, 'JournalQuest', tags ~= '' and (tags .. ' ' .. view.name) or view.name)
                 row.questId = id
-                -- picking a quest opens its Info
+                -- picking a quest shows it in Info and Hints
                 row.onClick = function()
                     if selected ~= id then
                         openClue = nil
                         clearPlacesFocus()
+                        selected = id
+                        drawJournal()
                     end
-                    selected = id
-                    showTab('info')
                 end
-                if view.state == 'locked' then
-                    row:setColor('#808080')
-                    row:setTooltip(view.reason)
+                -- nothing picked yet: the first quest of the list
+                if not selected or not quests[selected] then
+                    selected = id
                 end
                 if id == selected then
                     focus = row
@@ -530,38 +530,15 @@ local function drawList()
     end
 end
 
-local TABS = {
-    list = { button = 'listTab', widget = 'questList', scroll = 'listScroll' },
-    info = { button = 'infoTab', widget = 'info', scroll = 'infoScroll' },
-    hint = { button = 'hintTab', widget = 'hint', scroll = 'hintScroll' }
-}
-
-local function drawJournal()
+-- the three columns at once
+function drawJournal()
     if not journal or not journal:isVisible() then
         return
     end
+    drawList()
     updateTrackCheck()
-    if tab == 'list' then
-        drawList()
-    elseif tab == 'info' then
-        drawInfo()
-    else
-        drawHint()
-    end
-end
-
-function showTab(name)
-    if not journal or not TABS[name] then
-        return
-    end
-    tab = name
-    for key, entry in pairs(TABS) do
-        local on = key == name
-        journal:getChildById(entry.button):setOn(on)
-        journal:getChildById(entry.widget):setVisible(on)
-        journal:getChildById(entry.scroll):setVisible(on)
-    end
-    drawJournal()
+    drawInfo()
+    drawHint()
 end
 
 local function onSearchChange(widget, text)
@@ -571,11 +548,7 @@ local function onSearchChange(widget, text)
     searchEvent = scheduleEvent(function()
         searchEvent = nil
         searchText = text:lower()
-        if tab ~= 'list' then
-            showTab('list')
-        else
-            drawJournal()
-        end
+        drawJournal()
     end, SEARCH_DEBOUNCE)
 end
 
@@ -594,10 +567,8 @@ function openJournal(id)
     if id then
         selected = id
         openClue = nil
-        showTab('info')
-    else
-        showTab(tab)
     end
+    drawJournal()
     requestList()
 end
 
@@ -637,11 +608,7 @@ local function setupJournal()
     end
     filter.onOptionChange = function(_, _, data)
         tagFilter = data ~= '' and data or nil
-        if tab ~= 'list' then
-            showTab('list')
-        else
-            drawJournal()
-        end
+        drawJournal()
     end
     journal:getChildById('autoTrackCheck').onCheckChange = function(widget, checked)
         setAutoTrack(checked)
