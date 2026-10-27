@@ -52,13 +52,21 @@ end
 
 -- the way to the marker, from the server ("route"): walk legs with points to follow and travel legs (a boat, a
 -- carpet: an NPC and what to say). Without a way, the arrow points straight at the marker.
-local POINT_REACHED = 5   -- squares from a walk point that count as reached
+local POINT_REACHED = 3   -- squares from a walk point (same floor) that count as reached
 local TRAVELLED = 12      -- squares from where a trip lands that count as having travelled
-local OFF_ROUTE = 60      -- farther than this from the point to follow: ask for a new way
+local OFF_ROUTE = 25      -- farther than this from the point to follow: ask for a new way
 local JUMP = 30           -- a move this long between two looks is a trip or a teleport: ask for a new way
 local ROUTE_AGAIN = 3000  -- no sooner than this between two asks
 
 local route = nil         -- { legs, leg, point }
+local FLOOR_TEXT = {
+    up = tr('Go up here'),
+    down = tr('Go down here'),
+    ladder = tr('Climb the ladder'),
+    rope = tr('Use a rope here'),
+    sewer = tr('Go down the sewer grate'),
+    shovel = tr('Dig here with a shovel')
+}
 local lastAsk = 0
 local lastPosition = nil
 
@@ -92,7 +100,14 @@ local function aim(position)
     local marker = target.place.marker
     while route and route.legs[route.leg] do
         local leg = route.legs[route.leg]
-        if leg.kind == 'travel' then
+        if leg.kind == 'floor' then
+            -- done once the player is on another floor than the one it is on
+            if position.z ~= leg.at.z then
+                route.leg, route.point = route.leg + 1, 1
+            else
+                return leg.at, FLOOR_TEXT[leg.how] or tr('Change floor here')
+            end
+        elseif leg.kind == 'travel' then
             if chebyshev(position, leg.to) <= TRAVELLED then
                 route.leg, route.point = route.leg + 1, 1
             else
@@ -100,11 +115,12 @@ local function aim(position)
             end
         else
             local points = leg.points or {}
-            while points[route.point] and chebyshev(position, points[route.point]) <= POINT_REACHED do
+            while points[route.point] and points[route.point].z == position.z and
+                    chebyshev(position, points[route.point]) <= POINT_REACHED do
                 route.point = route.point + 1
             end
             if points[route.point] then
-                if chebyshev(position, points[route.point]) > OFF_ROUTE then
+                if chebyshev(position, points[route.point]) > OFF_ROUTE or points[route.point].z ~= position.z then
                     askRoute()
                 end
                 -- the last walk goes straight to the marker once its points are done
@@ -112,6 +128,11 @@ local function aim(position)
             end
             route.leg, route.point = route.leg + 1, 1
         end
+    end
+    -- the points of this answer are walked but the marker is not here yet: the rest of the way
+    if route and not route.legs[route.leg] and chebyshev(position, marker) > ARRIVED * 4 then
+        route = nil
+        askRoute()
     end
     return marker, nil
 end
