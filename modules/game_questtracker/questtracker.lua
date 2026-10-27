@@ -177,6 +177,7 @@ end
 -- mini window ---------------------------------------------------------------------------------------------------
 local miniWindow = nil
 local miniButton = nil
+local journalButton = nil
 
 -- "Rats 2/3"; a single-step objective shows just its label; a hidden one only its count ("?" for a single step)
 local function objectiveText(objective)
@@ -585,6 +586,9 @@ function openJournal(id)
     journal:getChildById('autoTrackCheck'):setChecked(isAutoTrack())
     journal:getChildById('showPlacesCheck'):setChecked(showsPlaces())
     journal:show()
+    if journalButton then
+        journalButton:setOn(true)
+    end
     journal:raise()
     journal:focus()
     if id then
@@ -600,6 +604,18 @@ end
 function closeJournal()
     if journal then
         journal:hide()
+    end
+    if journalButton then
+        journalButton:setOn(false)
+    end
+end
+
+-- the "Quest Log" button and key (the Tibia quest log is gone: design/quest-tracker.md, 12.7)
+function toggleJournal()
+    if journal and journal:isVisible() then
+        closeJournal()
+    else
+        openJournal()
     end
 end
 
@@ -665,6 +681,10 @@ function init()
     end
     miniButton = modules.game_mainpanel.addToggleButton('questTrackerButton', tr('Quest Tracker'),
         '/images/options/button_questlog_tracker', toggleMini, false, 1001)
+    journalButton = modules.game_mainpanel.addToggleButton('questLogButton', tr('Quest Log'),
+        '/images/options/button_questlog', toggleJournal, false, 1000)
+    Keybind.new("Windows", "Show/hide quest Log", "", "")
+    Keybind.bind("Windows", "Show/hide quest Log", { { type = KEY_DOWN, callback = toggleJournal } })
     setupJournal()
     initPlaces()
     -- the mini window's menu button: the journal and the auto-track option
@@ -721,6 +741,11 @@ function terminate()
         miniButton:destroy()
         miniButton = nil
     end
+    if journalButton then
+        journalButton:destroy()
+        journalButton = nil
+    end
+    Keybind.delete("Windows", "Show/hide quest Log")
     if miniWindow then
         miniWindow:destroy()
         miniWindow = nil

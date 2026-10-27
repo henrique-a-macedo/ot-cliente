@@ -12,7 +12,6 @@ Module
     - game_inventory
     - game_mainpanel
     - game_hotkeys
-    - game_questlog
     - game_textmessage
     - game_console
     - game_outfit
