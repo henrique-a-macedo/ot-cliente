@@ -496,6 +496,7 @@ end
 
 local function drawList()
     local list = journal:getChildById('questList')
+    list.onChildFocusChange = nil
     list:destroyChildren()
     local focus = nil
     for _, group in ipairs(GROUPS) do
@@ -509,15 +510,6 @@ local function drawList()
                 local tags = tagText(view)
                 local row = addText(list, 'JournalQuest', tags ~= '' and (tags .. ' ' .. view.name) or view.name)
                 row.questId = id
-                -- picking a quest shows it in Info and Hints
-                row.onClick = function()
-                    if selected ~= id then
-                        openClue = nil
-                        clearPlacesFocus()
-                        selected = id
-                        drawJournal()
-                    end
-                end
                 -- nothing picked yet: the first quest of the list
                 if not selected or not quests[selected] then
                     selected = id
@@ -533,6 +525,16 @@ local function drawList()
     end
     if focus then
         list:focusChild(focus, KeyboardFocusReason)
+    end
+    -- picking a quest (the list takes the click to move its focus) shows it in Info and Hints; redrawn on the next
+    -- frame, not inside the focus event of a row that the redraw destroys
+    list.onChildFocusChange = function(_, child)
+        if child and child.questId and child.questId ~= selected then
+            selected = child.questId
+            openClue = nil
+            clearPlacesFocus()
+            addEvent(drawJournal)
+        end
     end
 end
 
