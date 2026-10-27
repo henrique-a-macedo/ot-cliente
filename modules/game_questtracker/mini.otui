@@ -4,16 +4,35 @@ QuestMiniTitle < Label
   height: 14
   margin-top: 6
   padding-left: 2
+  padding-right: 18
   font: verdana-11px-rounded
   color: #e8c46a
   phantom: false
   text-auto-resize: false
+  layout: anchor
 
   $first:
     margin-top: 2
 
   $hover:
     color: #ffe08a
+
+  // the GPS of this quest: on guides to the nearest place of its step, off again on a second click
+  UIButton
+    id: gps
+    size: 14 14
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    icon: /game_questtracker/images/gps-arrow
+    icon-size: 12 12
+    icon-color: #808080
+    !tooltip: tr('GPS: guide me to this quest')
+
+    $hover:
+      icon-color: #e0e0e0
+
+    $on:
+      icon-color: #ffc828
 
 QuestMiniObjective < Label
   height: 13

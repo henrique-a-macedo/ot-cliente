@@ -206,17 +206,20 @@ local function drawMini()
             local title = g_ui.createWidget('QuestMiniTitle', list)
             title:setText(view.name)
             title:setTooltip(view.stage and (view.stage.title .. ': ' .. view.stage.text) or view.name)
-            -- a click guides to the nearest place of the step (the quest helper); the journal is in the menu
             title.onClick = function()
-                local place = nearestPlaceOf(view)
-                if place then
-                    guideTo(id, place)
-                else
-                    openJournal(id)
-                end
+                openJournal(id)
             end
-            if guidedQuest() == id then
-                title:setText('> ' .. view.name)
+            -- the GPS button: on guides to the nearest place of the step (the quest helper), a second click stops it
+            local gpsButton = title:getChildById('gps')
+            local place = nearestPlaceOf(view)
+            gpsButton:setVisible(place ~= nil)
+            gpsButton:setOn(guidedQuest() == id)
+            gpsButton.onClick = function()
+                if guidedQuest() == id then
+                    stopGuide()
+                else
+                    guideTo(id, nearestPlaceOf(view))
+                end
             end
             title.onMouseRelease = function(widget, mousePos, mouseButton)
                 if mouseButton ~= MouseRightButton then
