@@ -171,6 +171,8 @@ local function onMessage(protocol, opcode, data)
         changed(view.id)
     elseif data.action == 'places' then
         onPlacesMessage(data)
+    elseif data.action == 'mapplaces' then
+        onMapPlaces(data)
     end
 end
 
@@ -410,39 +412,17 @@ local function drawInfo()
     end
 end
 
+-- a click on a place opens the full map on it (the map shows every place of the tracked quests and of this one)
 local function addPlaceLinks(panel, view, objectiveIndex, places, label, more)
     for _, place in ipairs(places) do
         local link = addText(panel, 'JournalLink', placeText(place, label))
         link.onClick = function()
-            showPlaces(view.id, objectiveIndex, places, place, label, more)
+            showPlaces(view.id, place)
         end
     end
-    if #places > 1 or more then
-        local all = addText(panel, 'JournalLink', more and tr('Show all on the map...') or tr('Show all on the map'))
-        all.onClick = function()
-            showPlaces(view.id, objectiveIndex, places, places[1], label, more)
-        end
+    if more then
+        addText(panel, 'JournalText', tr('More on the map.'))
     end
-end
-
--- the places of the step the player is on (not of done objectives), and the label of the first objective with any
-function stepPlacesOf(view)
-    local places, label = {}, nil
-    if view.mystery or view.state ~= 'active' or not view.stage then
-        return places
-    end
-    for _, objective in ipairs(view.stage.objectives or {}) do
-        if not objective.done then
-            for _, place in ipairs(objective.places or {}) do
-                places[#places + 1] = place
-                label = label or objective.label
-            end
-        end
-    end
-    for _, place in ipairs(view.stage.places or {}) do
-        places[#places + 1] = place
-    end
-    return places, label
 end
 
 local function drawHint()
@@ -454,15 +434,6 @@ local function drawHint()
         return
     end
     addText(panel, 'JournalTitle', view.name)
-    -- every place of the step, on the full map
-    local stepPlaces, label = stepPlacesOf(view)
-    if #stepPlaces > 0 then
-        local button = g_ui.createWidget('JournalMapButton', panel)
-        button:setText(tr('Show on the map'))
-        button.onClick = function()
-            showPlaces(view.id, nil, stepPlaces, stepPlaces[1], label, false)
-        end
-    end
     local any = false
     if not view.mystery then
         if (view.state == 'available' or view.state == 'locked') and view.startPlaces and #view.startPlaces > 0 then

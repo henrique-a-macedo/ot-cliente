@@ -1,34 +1,24 @@
-// quest places on the minimap (questmap.lua): a patch over a whole area, never the spawn spots
-// a see-through patch over the area where they spawn
+// quest places on the full map (questmap.lua); the colour of each quest is set in Lua
+
+// one cell (8, 16... tiles) of a hunting ground that has a spawn: together they draw the shape of the ground
+QuestPlaceCell < UIWidget
+  phantom: true
+  background-color: #ff3b3080
+
+// a place without a shape (an NPC, an area to reach, before the shapes arrive)
 QuestPlaceArea < UIWidget
   phantom: true
-  background-color: #ffc14a38
+  background-color: #ff3b3080
   border-width: 1
-  border-color: #ffc14a59
+  border-color: #ff3b30e0
 
-  // a small list on a dark backing: the place, then one line per monster (readable over any map colour)
-  Label
-    id: name
-    anchors.centerIn: parent
-    font: verdana-9px-rounded
-    color: #ffffff
-    background-color: #000000b0
-    padding: 2 4 2 4
-    text-auto-resize: true
-    phantom: true
-
-// the places the journal asked to see
-QuestPlaceFocus < QuestPlaceArea
-  background-color: #4fa3ff40
-  border-color: #4fa3ff66
-
-// where available quests start; one per spot, the names in the tooltip
-QuestPlaceStart < Label
-  size: 12 16
-  text: !
-  font: verdana-11px-rounded
-  color: #ffd84a
-  text-align: center
-  background-color: #00000099
+// the list over a place: (quest,) place, then one line per monster; dark backing, a border in the quest colour
+QuestPlaceLabel < Label
+  font: verdana-11px-antialised
+  color: #ffffff
+  background-color: #000000c0
   border-width: 1
-  border-color: #ffd84a
+  border-color: #ff3b30
+  padding: 2 5 2 5
+  text-auto-resize: true
+  phantom: true

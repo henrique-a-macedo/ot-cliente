@@ -93,11 +93,6 @@ JournalLink < Label
   $hover:
     color: #c4e0ff
 
-// "Show on the map" in Hints: the full map with the places of the step
-JournalMapButton < Button
-  height: 20
-  margin-bottom: 4
-
 JournalColumnTitle < Label
   font: verdana-11px-rounded
   color: #e8c46a

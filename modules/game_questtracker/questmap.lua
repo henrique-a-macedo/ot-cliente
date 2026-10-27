@@ -1,19 +1,31 @@
--- Quest places on the minimap and on the full map (design/quest-tracker.md, section 12.2). A place is a named
--- rectangle with no floor ("Dragon Lair (Venore)"): it is drawn only on the full map, on whatever floor it shows,
--- as one see-through patch over the whole area, never the spawn spots. Drawn: the places the journal asked to see
--- ("Show on the map" in Hints, or a click on one place: the full map opens on it).
+-- Quest places on the full map (design/quest-tracker.md, section 12.2). A place is a named hunting ground with no
+-- floor in its text ("Dragon Lair (Venore)"): it is drawn as the cells that have a spawn (the shape of the ground, not
+-- a rectangle over the sea), on whatever floor the map shows, with a small list (quest, place, monsters).
+-- Drawn only on the full map (the minimap does not clip its children): every tracked quest in progress, each in its
+-- own colour, plus the quest of a place clicked in the journal (the map opens on it, on its floor).
+-- The shapes come from the server's "mapplaces" (asked with "map" when the full map opens); until then a quest shows
+-- the rectangles its view carries.
+local CELL_STYLE = 'QuestPlaceCell'
 local AREA_STYLE = 'QuestPlaceArea'
-local FOCUS_STYLE = 'QuestPlaceFocus'
-local START_STYLE = 'QuestPlaceStart'
+local LABEL_STYLE = 'QuestPlaceLabel'
+
+-- strong hues that read over the green and blue of the map (user, 2026-10-26: red, orange, purple...)
+local HUES = { 'ff3b30', 'ff9500', 'af52de', 'ff2d92', 'ffd60a', 'c0392b', 'e67e22', '8e44ad' }
+-- the server answers one "map" per second: asked again no sooner than this
+local MAP_REQUEST_INTERVAL = 1200
 
 local minimap = nil
 local overlays = {}
-local focus = nil      -- { quest, objective, places } shown from the journal
+local focusQuest = nil -- the quest of the place clicked in the journal (drawn even if not tracked)
+local mapPlaces = {}   -- quest id -> places with their cells (from "mapplaces")
 local lastFloor = nil
 local lastFull = nil
 local redrawEvent = nil
+local lastMapRequest = 0
+local mapRequestEvent = nil
 
 local onCameraPositionChange
+local onGeometryChange
 
 -- found on first use (the minimap may not exist yet when this module loads); the same widget goes full screen
 local function findMinimap()
@@ -25,7 +37,7 @@ local function findMinimap()
     local border = ui and ui.minimapBorder
     minimap = border and border:getChildById('minimap') or nil
     if minimap then
-        connect(minimap, { onCameraPositionChange = onCameraPositionChange })
+        connect(minimap, { onCameraPositionChange = onCameraPositionChange, onGeometryChange = onGeometryChange })
     end
     return minimap
 end
@@ -39,63 +51,38 @@ local function clearOverlays()
     overlays = {}
 end
 
--- the area on the floor the map shows now
+-- a rectangle of tiles (from/to) or a point (a label), on the floor the map shows now
 local function anchor(map, widget)
     local z = map:getCameraPosition().z
-    -- only on the full map: the minimap does not clip its children, a patch spilled over the windows next to it
-    widget:setVisible(map.fullMapView == true)
     widget:breakAnchors()
-    local place = widget.place
-    if widget.isStart then
-        local center = { x = math.floor((place.from.x + place.to.x) / 2), y = math.floor((place.from.y + place.to.y) / 2), z = z }
-        map:centerInPosition(widget, center)
+    if widget.center then
+        map:centerInPosition(widget, { x = widget.center.x, y = widget.center.y, z = z })
         return
     end
-    -- names only on the full map: on the small minimap they would cover each other
-    local label = widget:getChildById('name')
-    if label then
-        label:setVisible(map.fullMapView == true)
-    end
-    local topLeft = { x = place.from.x, y = place.from.y, z = z }
-    local bottomRight = { x = place.to.x, y = place.to.y, z = z }
+    local topLeft = { x = widget.from.x, y = widget.from.y, z = z }
+    local bottomRight = { x = widget.to.x, y = widget.to.y, z = z }
     map:anchorPosition(widget, AnchorLeft, topLeft, AnchorLeft)
     map:anchorPosition(widget, AnchorTop, topLeft, AnchorTop)
     map:anchorPosition(widget, AnchorRight, bottomRight, AnchorRight)
     map:anchorPosition(widget, AnchorBottom, bottomRight, AnchorBottom)
 end
 
--- one hue per group (a monster of the objective, or a quest), so areas next to each other can be told apart; the
--- fill at about 45% (user, 2026-10-26: not too see-through)
-local HUES = { 'ff5a4a', '4fa3ff', '5fd06a', 'f2b33d', 'b86bf0', '36c9c6', 'f07ab8', '9cc23f' }
-local function hueOf(key)
-    local sum = 0
-    for i = 1, #key do
-        sum = sum + key:byte(i) * i
-    end
-    return HUES[sum % #HUES + 1]
-end
-
-local function addOverlay(map, style, place, text, group)
+local function add(map, style, hue, from, to, center)
     local widget = g_ui.createWidget(style)
-    if group then
-        local hue = hueOf(group)
-        widget:setBackgroundColor('#' .. hue .. '72')
-        widget:setBorderColor('#' .. hue .. 'e0')
+    if hue and style ~= LABEL_STYLE then
+        widget:setBackgroundColor('#' .. hue .. '80')
+        if style == AREA_STYLE then
+            widget:setBorderColor('#' .. hue .. 'e0')
+        end
     end
     map:insertChild(1, widget)
-    widget.place = place
-    widget.isStart = style == START_STYLE
-    local label = widget:getChildById('name')
-    if label then
-        label:setText(text)
-    else
-        widget:setTooltip(text)
-    end
+    widget.from, widget.to, widget.center = from, to, center
     anchor(map, widget)
     overlays[#overlays + 1] = widget
+    return widget
 end
 
--- on the map, a list: the place, then "48  Minotaur" per monster
+-- "48  Minotaur" per monster under the place name (the quest name first, in its colour, when several are drawn)
 function placeList(place, label)
     local lines = { place.name }
     if place.monsters and #place.monsters > 0 then
@@ -108,8 +95,7 @@ function placeList(place, label)
     return table.concat(lines, '\n')
 end
 
--- "East of Thais - Minotaur: 40, Minotaur Archer: 29" (every monster of the objective in that area, as the server
--- merged them), "Dragon Lair (Venore) - Dragons: 23" (only the objective label), or just the name (an NPC, an area)
+-- "East of Thais - Minotaur: 40, Minotaur Archer: 29" (the journal's Hints), or just the name (an NPC, an area)
 function placeText(place, label)
     if place.monsters and #place.monsters > 0 then
         local parts = {}
@@ -123,22 +109,47 @@ function placeText(place, label)
     return place.name
 end
 
-local function placesOfView(view)
+-- the places of a quest: the shapes from "mapplaces", or the rectangles of its view until they arrive
+local function placesOf(id)
+    if mapPlaces[id] then
+        return mapPlaces[id]
+    end
+    local view = quests[id]
     local list = {}
-    if view.mystery or view.state ~= 'active' or not view.stage then
+    if not view or view.mystery or view.state ~= 'active' or not view.stage then
         return list
     end
     for _, objective in ipairs(view.stage.objectives or {}) do
         if not objective.done then
             for _, place in ipairs(objective.places or {}) do
-                list[#list + 1] = { place = place, text = placeText(place, objective.label) }
+                list[#list + 1] = place
             end
         end
     end
     for _, place in ipairs(view.stage.places or {}) do
-        list[#list + 1] = { place = place, text = place.name }
+        list[#list + 1] = place
     end
     return list
+end
+
+local function drawPlace(map, place, hue, questName)
+    local size = place.cell
+    if place.cells and size and #place.cells > 0 then
+        for i = 1, #place.cells, 2 do
+            local x, y = place.cells[i] * size, place.cells[i + 1] * size
+            add(map, CELL_STYLE, hue, { x = x, y = y }, { x = x + size - 1, y = y + size - 1 })
+        end
+    else
+        add(map, AREA_STYLE, hue, place.from, place.to)
+    end
+    local center = { x = math.floor((place.from.x + place.to.x) / 2), y = math.floor((place.from.y + place.to.y) / 2) }
+    local label = add(map, LABEL_STYLE, hue, nil, nil, center)
+    local text = placeList(place)
+    if questName then
+        text = questName .. '\n' .. text
+    end
+    label:setText(text)
+    label:setBorderColor('#' .. hue)
 end
 
 function redrawPlaces()
@@ -148,11 +159,22 @@ function redrawPlaces()
     end
     clearOverlays()
     lastFloor = map:getCameraPosition().z
-    -- only what the journal asked to see ("Show on the map" or a place in Hints; user, 2026-10-26)
-    if focus then
-        for _, place in ipairs(focus.places) do
-            addOverlay(map, FOCUS_STYLE, place, placeList(place, focus.label),
-                place.monsters and place.monsters[1] and place.monsters[1].name or focus.label or focus.quest)
+    lastFull = map.fullMapView
+    if not map.fullMapView then
+        return
+    end
+    -- every tracked quest in progress, and the one clicked in the journal; one colour each
+    local drawn = {}
+    for _, id in ipairs(questOrder) do
+        local view = quests[id]
+        if view and view.state == 'active' and not view.mystery and (isTracked(id) or id == focusQuest) then
+            drawn[#drawn + 1] = id
+        end
+    end
+    for index, id in ipairs(drawn) do
+        local hue = HUES[(index - 1) % #HUES + 1]
+        for _, place in ipairs(placesOf(id)) do
+            drawPlace(map, place, hue, #drawn > 1 and quests[id].name or nil)
         end
     end
 end
@@ -168,10 +190,46 @@ function scheduleRedrawPlaces()
     end, 100)
 end
 
--- the floor the map shows changed (or the map went full screen): every patch moves to it
+-- the shapes of every quest in progress; at most one request per MAP_REQUEST_INTERVAL (the last one is kept)
+function requestMapPlaces()
+    if mapRequestEvent then
+        return
+    end
+    local wait = math.max(0, lastMapRequest + MAP_REQUEST_INTERVAL - g_clock.millis())
+    mapRequestEvent = scheduleEvent(function()
+        mapRequestEvent = nil
+        lastMapRequest = g_clock.millis()
+        local protocol = g_game.getProtocolGame()
+        if protocol then
+            protocol:sendExtendedOpcode(OPCODE, 'map')
+        end
+    end, wait)
+end
+
+-- answer to "map": the places of one quest, with their shape
+function onMapPlaces(data)
+    if type(data.quest) == 'string' and type(data.places) == 'table' then
+        mapPlaces[data.quest] = data.places
+        scheduleRedrawPlaces()
+    end
+end
+
+-- answer to "places" (older request): the same shapes, for one objective
+function onPlacesMessage(data)
+end
+
+-- the floor the map shows changed, or the map went full screen (or back)
 onCameraPositionChange = function(widget, position)
-    if position and (position.z ~= lastFloor or widget.fullMapView ~= lastFull) then
+    if not position then
+        return
+    end
+    if widget.fullMapView ~= lastFull then
         lastFull = widget.fullMapView
+        if widget.fullMapView then
+            requestMapPlaces()
+        end
+        redrawPlaces()
+    elseif position.z ~= lastFloor then
         lastFloor = position.z
         for _, overlay in ipairs(overlays) do
             if not overlay:isDestroyed() then
@@ -181,13 +239,20 @@ onCameraPositionChange = function(widget, position)
     end
 end
 
--- the journal asks to see the places of an objective: the full map opens on the clicked one, with all of them
-function showPlaces(questId, objectiveIndex, places, clicked, label, more)
+-- the map changes size when it goes full screen (or back), even when the camera does not move
+onGeometryChange = function(widget)
+    if widget.fullMapView ~= lastFull then
+        onCameraPositionChange(widget, widget:getCameraPosition())
+    end
+end
+
+-- a place clicked in the journal: the full map opens on it, on its floor, with its quest drawn
+function showPlaces(questId, clicked)
     local map = findMinimap()
     if not map then
         return
     end
-    focus = { quest = questId, objective = objectiveIndex, places = places, label = label }
+    focusQuest = questId
     if not map.fullMapView and modules.game_minimap.fullscreen then
         modules.game_minimap.fullscreen()
     end
@@ -195,29 +260,25 @@ function showPlaces(questId, objectiveIndex, places, clicked, label, more)
         map:setCameraPosition({
             x = math.floor((clicked.from.x + clicked.to.x) / 2),
             y = math.floor((clicked.from.y + clicked.to.y) / 2),
-            z = map:getCameraPosition().z
+            z = clicked.z or map:getCameraPosition().z
         })
     end
+    requestMapPlaces()
     redrawPlaces()
-    -- the view carries the biggest places only: ask for all of them
-    if more and objectiveIndex then
-        local protocol = g_game.getProtocolGame()
-        if protocol then
-            protocol:sendExtendedOpcode(OPCODE, string.format('places %s %d', questId, objectiveIndex))
-        end
-    end
 end
 
--- answer to "places": every place of the objective in focus
-function onPlacesMessage(data)
-    if focus and data.quest == focus.quest and data.objective == focus.objective and type(data.places) == 'table' then
-        focus.places = data.places
-        redrawPlaces()
+-- the quest data changed: the shapes are asked again next time the full map opens (or now, if it is open)
+function onQuestsChanged()
+    mapPlaces = {}
+    local map = findMinimap()
+    if map and map.fullMapView then
+        requestMapPlaces()
     end
+    scheduleRedrawPlaces()
 end
 
 function clearPlacesFocus()
-    focus = nil
+    focusQuest = nil
     scheduleRedrawPlaces()
 end
 
@@ -230,10 +291,15 @@ function terminatePlaces()
         removeEvent(redrawEvent)
         redrawEvent = nil
     end
+    if mapRequestEvent then
+        removeEvent(mapRequestEvent)
+        mapRequestEvent = nil
+    end
     if minimap and not minimap:isDestroyed() then
-        disconnect(minimap, { onCameraPositionChange = onCameraPositionChange })
+        disconnect(minimap, { onCameraPositionChange = onCameraPositionChange, onGeometryChange = onGeometryChange })
     end
     clearOverlays()
-    focus = nil
+    focusQuest = nil
+    mapPlaces = {}
     minimap = nil
 end
