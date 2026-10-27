@@ -79,8 +79,9 @@ JournalTitle < Label
   text-wrap: true
   text-auto-resize: true
 
-// a place or a clue: clicking does something
+// a place or a clue: clicking does something (a Label is phantom by default: UILabel.create)
 JournalLink < Label
+  phantom: false
   margin-top: 2
   padding-left: 8
   color: #8fc4ff

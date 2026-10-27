@@ -1,6 +1,6 @@
 -- Quest places on the minimap and on the full map (design/quest-tracker.md, section 12.2). A place is a named
--- rectangle with no floor ("Dragon Lair (Venore)"): it is drawn on whatever floor the map shows, as one see-through
--- patch over the whole area, never the spawn spots. Drawn: the places of the quests checked in the journal list
+-- rectangle with no floor ("Dragon Lair (Venore)"): it is drawn only on the full map, on whatever floor it shows,
+-- as one see-through patch over the whole area, never the spawn spots. Drawn: the places of the quests checked in the journal list
 -- (current stage) and the places the journal asked to see (a click on a place opens the full map on it).
 local AREA_STYLE = 'QuestPlaceArea'
 local FOCUS_STYLE = 'QuestPlaceFocus'
@@ -42,6 +42,8 @@ end
 -- the area on the floor the map shows now
 local function anchor(map, widget)
     local z = map:getCameraPosition().z
+    -- only on the full map: the minimap does not clip its children, a patch spilled over the windows next to it
+    widget:setVisible(map.fullMapView == true)
     widget:breakAnchors()
     local place = widget.place
     if widget.isStart then

@@ -437,10 +437,6 @@ local function drawInfo()
                 strike(line)
             end
         end
-        if #view.rewards > 0 then
-            addText(panel, 'JournalHeading', tr('Reward for this step'))
-            addText(panel, 'JournalText', table.concat(view.rewards, ', '))
-        end
     end
     if #view.final > 0 then
         addText(panel, 'JournalHeading', view.state == 'done' and tr('Reward') or tr('Final reward'))
@@ -546,6 +542,22 @@ local function drawList()
                 mapCheck:setChecked(isOnMap(id))
                 mapCheck.onCheckChange = function(_, checked)
                     setOnMap(id, checked)
+                end
+                -- double click: the full map with every place of the step
+                row.onDoubleClick = function()
+                    local places, first = {}, nil
+                    for index, objective in ipairs(view.stage and view.stage.objectives or {}) do
+                        if not objective.done then
+                            for _, place in ipairs(objective.places or {}) do
+                                places[#places + 1] = place
+                                first = first or { index = index, label = objective.label }
+                            end
+                        end
+                    end
+                    if #places > 0 then
+                        showPlaces(id, nil, places, places[1], first.label, false)
+                    end
+                    return true
                 end
                 -- nothing picked yet: the first quest of the list
                 if not selected or not quests[selected] then
