@@ -20,7 +20,7 @@ local countEvent = nil
 local function characterSettings()
     local all = g_settings.getNode(TRACKED_NODE) or {}
     local own = all[g_game.getCharacterName()] or {}
-    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false }
+    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false, guide = own.guide }
 end
 
 local function saveSettings()
