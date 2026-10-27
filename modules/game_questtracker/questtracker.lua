@@ -206,20 +206,21 @@ local function drawMini()
             local title = g_ui.createWidget('QuestMiniTitle', list)
             title:setText(view.name)
             title:setTooltip(view.stage and (view.stage.title .. ': ' .. view.stage.text) or view.name)
-            title.onClick = function()
-                openJournal(id)
-            end
-            -- the GPS button: on guides to the nearest place of the step (the quest helper), a second click stops it
+            -- the name and the GPS button make this the active quest of the GPS (one at a time); again turns it off
             local gpsButton = title:getChildById('gps')
-            local place = nearestPlaceOf(view)
-            gpsButton:setVisible(place ~= nil)
+            gpsButton:setVisible(nearestPlaceOf(view) ~= nil)
             gpsButton:setOn(guidedQuest() == id)
+            -- the click redraws this window: not inside the event of the widget the redraw destroys
             gpsButton.onClick = function()
-                if guidedQuest() == id then
-                    stopGuide()
-                else
-                    guideTo(id, nearestPlaceOf(view))
-                end
+                addEvent(function()
+                    toggleGuide(id)
+                end)
+                return true
+            end
+            title.onClick = function()
+                addEvent(function()
+                    toggleGuide(id)
+                end)
             end
             title.onMouseRelease = function(widget, mousePos, mouseButton)
                 if mouseButton ~= MouseRightButton then
@@ -266,9 +267,24 @@ local function drawMini()
     end
 end
 
--- the GPS changed its quest: the mini window marks the guided one
+-- the GPS changed its quest: the mini window and the journal list mark the guided one
 function refreshMini()
     drawMini()
+    if journal and journal:isVisible() then
+        drawJournal()
+    end
+end
+
+-- one active quest for the GPS: this one (the nearest place of its step), or none if it already was
+function toggleGuide(id)
+    if guidedQuest() == id then
+        stopGuide()
+        return
+    end
+    local place = nearestPlaceOf(quests[id])
+    if place then
+        guideTo(id, place)
+    end
 end
 
 -- "Quest started / updated / completed" on screen when a tracked quest moves
@@ -525,6 +541,15 @@ local function drawList()
                 local row = g_ui.createWidget('JournalQuest', list)
                 row:getChildById('name'):setText(tags ~= '' and (tags .. ' ' .. view.name) or view.name)
                 row.questId = id
+                -- the GPS of this quest (one active at a time), as in the mini window
+                local gpsButton = row:getChildById('gps')
+                gpsButton:setVisible(view.state == 'active' and nearestPlaceOf(view) ~= nil)
+                gpsButton:setOn(guidedQuest() == id)
+                gpsButton.onClick = function()
+                    addEvent(function()
+                        toggleGuide(id)
+                    end)
+                end
                 -- the check tracks the quest (the mini window); only a quest in progress can be tracked
                 local trackCheck = row:getChildById('trackCheck')
                 trackCheck:setVisible(view.state == 'active')
