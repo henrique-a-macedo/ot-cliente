@@ -18,9 +18,7 @@ local countEvent = nil
 local function characterSettings()
     local all = g_settings.getNode(TRACKED_NODE) or {}
     local own = all[g_game.getCharacterName()] or {}
-    -- onMap: the quests whose places are drawn on the map (the check in the journal list); none by default
-    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false, showPlaces = own.showPlaces ~= false,
-        onMap = own.onMap or {} }
+    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false }
 end
 
 local function saveSettings()
@@ -38,19 +36,6 @@ local function changed(id)
     for _, callback in ipairs(changeListeners) do
         callback(id)
     end
-end
-
-function isOnMap(id)
-    return settings ~= nil and settings.onMap[id] == true
-end
-
-function setOnMap(id, on)
-    if not settings then
-        return
-    end
-    settings.onMap[id] = on and true or nil
-    saveSettings()
-    redrawPlaces()
 end
 
 -- a line struck through, over the text of a label (done objectives and stages)
@@ -84,19 +69,6 @@ function setAutoTrack(on)
     if settings then
         settings.autoTrack = on
         saveSettings()
-    end
-end
-
--- quest places on the map (option "Places on map", per character)
-function showsPlaces()
-    return settings ~= nil and settings.showPlaces
-end
-
-function setShowPlaces(on)
-    if settings then
-        settings.showPlaces = on
-        saveSettings()
-        redrawPlaces()
     end
 end
 
@@ -378,15 +350,6 @@ local function selectedView()
     return selected and quests[selected]
 end
 
-local function updateTrackCheck()
-    local view = selectedView()
-    local trackCheck = journal:getChildById('trackCheck')
-    trackCheck.updating = true
-    trackCheck:setChecked(view ~= nil and isTracked(selected))
-    trackCheck:setEnabled(view ~= nil and view.state == 'active')
-    trackCheck.updating = false
-end
-
 local function drawInfo()
     local panel = journal:getChildById('info')
     panel:destroyChildren()
@@ -459,6 +422,26 @@ local function addPlaceLinks(panel, view, objectiveIndex, places, label, more)
     end
 end
 
+-- the places of the step the player is on (not of done objectives), and the label of the first objective with any
+function stepPlacesOf(view)
+    local places, label = {}, nil
+    if view.mystery or view.state ~= 'active' or not view.stage then
+        return places
+    end
+    for _, objective in ipairs(view.stage.objectives or {}) do
+        if not objective.done then
+            for _, place in ipairs(objective.places or {}) do
+                places[#places + 1] = place
+                label = label or objective.label
+            end
+        end
+    end
+    for _, place in ipairs(view.stage.places or {}) do
+        places[#places + 1] = place
+    end
+    return places, label
+end
+
 local function drawHint()
     local panel = journal:getChildById('hint')
     panel:destroyChildren()
@@ -468,6 +451,15 @@ local function drawHint()
         return
     end
     addText(panel, 'JournalTitle', view.name)
+    -- every place of the step, on the full map
+    local stepPlaces, label = stepPlacesOf(view)
+    if #stepPlaces > 0 then
+        local button = g_ui.createWidget('JournalMapButton', panel)
+        button:setText(tr('Show on the map'))
+        button.onClick = function()
+            showPlaces(view.id, nil, stepPlaces, stepPlaces[1], label, false)
+        end
+    end
     local any = false
     if not view.mystery then
         if (view.state == 'available' or view.state == 'locked') and view.startPlaces and #view.startPlaces > 0 then
@@ -536,28 +528,15 @@ local function drawList()
                 local row = g_ui.createWidget('JournalQuest', list)
                 row:getChildById('name'):setText(tags ~= '' and (tags .. ' ' .. view.name) or view.name)
                 row.questId = id
-                local mapCheck = row:getChildById('mapCheck')
-                -- only a quest in progress has places (and a mystery quest never shows them)
-                mapCheck:setVisible(view.state == 'active' and not view.mystery)
-                mapCheck:setChecked(isOnMap(id))
-                mapCheck.onCheckChange = function(_, checked)
-                    setOnMap(id, checked)
-                end
-                -- double click: the full map with every place of the step
-                row.onDoubleClick = function()
-                    local places, first = {}, nil
-                    for index, objective in ipairs(view.stage and view.stage.objectives or {}) do
-                        if not objective.done then
-                            for _, place in ipairs(objective.places or {}) do
-                                places[#places + 1] = place
-                                first = first or { index = index, label = objective.label }
-                            end
-                        end
-                    end
-                    if #places > 0 then
-                        showPlaces(id, nil, places, places[1], first.label, false)
-                    end
-                    return true
+                -- the check tracks the quest (the mini window); only a quest in progress can be tracked
+                local trackCheck = row:getChildById('trackCheck')
+                trackCheck:setVisible(view.state == 'active')
+                trackCheck:setChecked(isTracked(id))
+                trackCheck.onCheckChange = function(_, checked)
+                    -- the change redraws the list: not inside the event of this check box
+                    addEvent(function()
+                        setTracked(id, checked)
+                    end)
                 end
                 -- nothing picked yet: the first quest of the list
                 if not selected or not quests[selected] then
@@ -593,7 +572,6 @@ function drawJournal()
         return
     end
     drawList()
-    updateTrackCheck()
     drawInfo()
     drawHint()
 end
@@ -614,7 +592,6 @@ function openJournal(id)
         return
     end
     journal:getChildById('autoTrackCheck'):setChecked(isAutoTrack())
-    journal:getChildById('showPlacesCheck'):setChecked(showsPlaces())
     journal:show()
     if journalButton then
         journalButton:setOn(true)
@@ -647,13 +624,6 @@ function toggleJournal()
     end
 end
 
-function onTrackCheck(checked)
-    local trackCheck = journal and journal:getChildById('trackCheck')
-    if trackCheck and not trackCheck.updating and selected then
-        setTracked(selected, checked)
-    end
-end
-
 local function setupJournal()
     journal = g_ui.displayUI('journal')
     journal:hide()
@@ -679,11 +649,6 @@ local function setupJournal()
     end
     journal:getChildById('autoTrackCheck').onCheckChange = function(widget, checked)
         setAutoTrack(checked)
-    end
-    journal:getChildById('showPlacesCheck').onCheckChange = function(widget, checked)
-        if checked ~= showsPlaces() then
-            setShowPlaces(checked)
-        end
     end
 end
 
@@ -733,9 +698,6 @@ function init()
             end)
             menu:addCheckBox(tr('Track new quests'), isAutoTrack(), function(_, checked)
                 setAutoTrack(checked)
-            end)
-            menu:addCheckBox(tr('Quest places on the map'), showsPlaces(), function(_, checked)
-                setShowPlaces(checked)
             end)
             menu:display(mousePos)
             return true

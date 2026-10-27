@@ -6,11 +6,14 @@ QuestPlaceArea < UIWidget
   border-width: 1
   border-color: #ffc14a59
 
+  // the name on a dark backing, readable over any map colour
   Label
     id: name
     anchors.centerIn: parent
     font: verdana-11px-rounded
-    color: #f0d890
+    color: #ffffff
+    background-color: #000000a0
+    padding: 1 4 1 4
     text-auto-resize: true
     phantom: true
 

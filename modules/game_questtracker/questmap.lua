@@ -1,7 +1,7 @@
 -- Quest places on the minimap and on the full map (design/quest-tracker.md, section 12.2). A place is a named
 -- rectangle with no floor ("Dragon Lair (Venore)"): it is drawn only on the full map, on whatever floor it shows,
--- as one see-through patch over the whole area, never the spawn spots. Drawn: the places of the quests checked in the journal list
--- (current stage) and the places the journal asked to see (a click on a place opens the full map on it).
+-- as one see-through patch over the whole area, never the spawn spots. Drawn: the places the journal asked to see
+-- ("Show on the map" in Hints, or a click on one place: the full map opens on it).
 local AREA_STYLE = 'QuestPlaceArea'
 local FOCUS_STYLE = 'QuestPlaceFocus'
 local START_STYLE = 'QuestPlaceStart'
@@ -64,17 +64,30 @@ local function anchor(map, widget)
     map:anchorPosition(widget, AnchorBottom, bottomRight, AnchorBottom)
 end
 
-local function addOverlay(map, style, place, text)
+-- one hue per group (a monster of the objective, or a quest), so areas next to each other can be told apart; the
+-- fill at about 45% (user, 2026-10-26: not too see-through)
+local HUES = { 'ff5a4a', '4fa3ff', '5fd06a', 'f2b33d', 'b86bf0', '36c9c6', 'f07ab8', '9cc23f' }
+local function hueOf(key)
+    local sum = 0
+    for i = 1, #key do
+        sum = sum + key:byte(i) * i
+    end
+    return HUES[sum % #HUES + 1]
+end
+
+local function addOverlay(map, style, place, text, group)
     local widget = g_ui.createWidget(style)
+    if group then
+        local hue = hueOf(group)
+        widget:setBackgroundColor('#' .. hue .. '72')
+        widget:setBorderColor('#' .. hue .. 'e0')
+    end
     map:insertChild(1, widget)
     widget.place = place
     widget.isStart = style == START_STYLE
     local label = widget:getChildById('name')
     if label then
         label:setText(text)
-        if style == FOCUS_STYLE then
-            label:setColor('#cfe4ff')
-        end
     else
         widget:setTooltip(text)
     end
@@ -115,21 +128,11 @@ function redrawPlaces()
     end
     clearOverlays()
     lastFloor = map:getCameraPosition().z
-    if not showsPlaces() then
-        return
-    end
-    -- only the quests checked in the journal list (user, 2026-10-26: not every quest on the minimap)
-    for _, id in ipairs(questOrder) do
-        local view = quests[id]
-        if view and isOnMap(id) then
-            for _, entry in ipairs(placesOfView(view)) do
-                addOverlay(map, AREA_STYLE, entry.place, view.name .. ': ' .. entry.text)
-            end
-        end
-    end
+    -- only what the journal asked to see ("Show on the map" or a place in Hints; user, 2026-10-26)
     if focus then
         for _, place in ipairs(focus.places) do
-            addOverlay(map, FOCUS_STYLE, place, placeText(place, focus.label))
+            addOverlay(map, FOCUS_STYLE, place, placeText(place, focus.label),
+                place.monster or focus.label or focus.quest)
         end
     end
 end

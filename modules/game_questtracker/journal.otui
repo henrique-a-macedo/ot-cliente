@@ -14,7 +14,7 @@ JournalGroup < Label
   $first:
     margin-top: 0
 
-// a quest of the list: the check shows its places on the map, the name picks it
+// a quest of the list: the check tracks it (the mini window), the name picks it
 JournalQuest < UIWidget
   height: 18
   focusable: true
@@ -29,16 +29,16 @@ JournalQuest < UIWidget
     background-color: #ffffff22
 
   CheckBox
-    id: mapCheck
+    id: trackCheck
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 4
     size: 14 14
-    !tooltip: tr('Show on the map')
+    !tooltip: tr('Track this quest (mini window)')
 
   Label
     id: name
-    anchors.left: mapCheck.right
+    anchors.left: trackCheck.right
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     margin-left: 4
@@ -93,6 +93,11 @@ JournalLink < Label
   $hover:
     color: #c4e0ff
 
+// "Show on the map" in Hints: the full map with the places of the step
+JournalMapButton < Button
+  height: 20
+  margin-bottom: 4
+
 JournalColumnTitle < Label
   font: verdana-11px-rounded
   color: #e8c46a
@@ -100,7 +105,7 @@ JournalColumnTitle < Label
 
 JournalPanel < ScrollablePanel
   anchors.top: listTitle.bottom
-  anchors.bottom: trackCheck.top
+  anchors.bottom: autoTrackCheck.top
   margin-top: 4
   margin-bottom: 8
   padding: 4
@@ -112,7 +117,7 @@ JournalPanel < ScrollablePanel
 // the panel that anchors to it loops, and the loop closed the client)
 JournalScroll < VerticalScrollBar
   anchors.top: listTitle.bottom
-  anchors.bottom: trackCheck.top
+  anchors.bottom: autoTrackCheck.top
   margin-top: 4
   margin-bottom: 8
   step: 16
@@ -170,7 +175,7 @@ MainWindow
     vertical-scrollbar: listScroll
     anchors.top: listTitle.bottom
     anchors.left: parent.left
-    anchors.bottom: trackCheck.top
+    anchors.bottom: autoTrackCheck.top
     margin-top: 4
     margin-bottom: 8
     width: 210
@@ -222,28 +227,11 @@ MainWindow
     margin-left: 10
 
   CheckBox
-    id: trackCheck
-    !text: tr('Track this quest')
+    id: autoTrackCheck
+    !text: tr('Track new quests')
     anchors.left: parent.left
     anchors.bottom: parent.bottom
     width: 130
-    @onCheckChange: modules.game_questtracker.onTrackCheck(self:isChecked())
-
-  CheckBox
-    id: autoTrackCheck
-    !text: tr('Track new quests')
-    anchors.left: trackCheck.right
-    anchors.bottom: parent.bottom
-    margin-left: 10
-    width: 130
-
-  CheckBox
-    id: showPlacesCheck
-    !text: tr('Places on map')
-    anchors.left: autoTrackCheck.right
-    anchors.bottom: parent.bottom
-    margin-left: 10
-    width: 120
 
   Button
     id: closeButton
