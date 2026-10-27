@@ -14,11 +14,10 @@ JournalGroup < Label
   $first:
     margin-top: 0
 
-JournalQuest < Label
-  height: 16
-  padding-left: 10
+// a quest of the list: the check shows its places on the map, the name picks it
+JournalQuest < UIWidget
+  height: 18
   focusable: true
-  color: #dfdfdf
   background-color: alpha
   change-cursor-image: true
   cursor: pointer
@@ -28,7 +27,29 @@ JournalQuest < Label
 
   $focus:
     background-color: #ffffff22
-    color: #ffffff
+
+  CheckBox
+    id: mapCheck
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    size: 14 14
+    !tooltip: tr('Show on the map')
+
+  Label
+    id: name
+    anchors.left: mapCheck.right
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    color: #dfdfdf
+    phantom: true
+
+// a line struck through: an objective or a stage already done
+JournalStrike < UIWidget
+  height: 1
+  background-color: #7fbf6f
+  phantom: true
 
 JournalHeading < Label
   margin-top: 8
@@ -44,6 +65,13 @@ JournalText < Label
   color: #c0c0c0
   text-wrap: true
   text-auto-resize: true
+
+// an objective line: no wrap, so a strike can follow the text width
+JournalObjective < Label
+  margin-top: 2
+  color: #c0c0c0
+  text-auto-resize: true
+  layout: anchor
 
 JournalTitle < Label
   font: verdana-11px-rounded
@@ -116,7 +144,7 @@ MainWindow
     margin-right: 8
     size: 130 22
     text-align: left
-    text-offset: 8 3
+    text-offset: 8 0
     image-clip: 0 0 91 20
 
   ComboBox
@@ -125,7 +153,7 @@ MainWindow
     anchors.right: parent.right
     size: 130 22
     text-align: left
-    text-offset: 8 3
+    text-offset: 8 0
     image-clip: 0 0 91 20
 
   JournalColumnTitle

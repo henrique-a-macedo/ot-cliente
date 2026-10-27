@@ -1,9 +1,10 @@
 // quest places on the minimap (questmap.lua): a patch over a whole area, never the spawn spots
+// a see-through patch over the area where they spawn
 QuestPlaceArea < UIWidget
   phantom: true
-  background-color: #e8c46a26
+  background-color: #ffc14a38
   border-width: 1
-  border-color: #e8c46a99
+  border-color: #ffc14a59
 
   Label
     id: name
@@ -15,8 +16,8 @@ QuestPlaceArea < UIWidget
 
 // the places the journal asked to see
 QuestPlaceFocus < QuestPlaceArea
-  background-color: #5fa8ff33
-  border-color: #5fa8ffcc
+  background-color: #4fa3ff40
+  border-color: #4fa3ff66
 
 // where available quests start; one per spot, the names in the tooltip
 QuestPlaceStart < Label

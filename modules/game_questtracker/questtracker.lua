@@ -18,7 +18,9 @@ local countEvent = nil
 local function characterSettings()
     local all = g_settings.getNode(TRACKED_NODE) or {}
     local own = all[g_game.getCharacterName()] or {}
-    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false, showPlaces = own.showPlaces ~= false }
+    -- onMap: the quests whose places are drawn on the map (the check in the journal list); none by default
+    return { tracked = own.tracked or {}, autoTrack = own.autoTrack ~= false, showPlaces = own.showPlaces ~= false,
+        onMap = own.onMap or {} }
 end
 
 local function saveSettings()
@@ -36,6 +38,29 @@ local function changed(id)
     for _, callback in ipairs(changeListeners) do
         callback(id)
     end
+end
+
+function isOnMap(id)
+    return settings ~= nil and settings.onMap[id] == true
+end
+
+function setOnMap(id, on)
+    if not settings then
+        return
+    end
+    settings.onMap[id] = on and true or nil
+    saveSettings()
+    redrawPlaces()
+end
+
+-- a line struck through, over the text of a label (done objectives and stages)
+function strike(label)
+    local line = g_ui.createWidget('JournalStrike', label)
+    line:addAnchor(AnchorLeft, 'parent', AnchorLeft)
+    line:addAnchor(AnchorVerticalCenter, 'parent', AnchorVerticalCenter)
+    line:setMarginLeft(label:getPaddingLeft())
+    line:setWidth(label:getTextSize().width)
+    return line
 end
 
 function isTracked(id)
@@ -232,6 +257,7 @@ local function drawMini()
                 line:setText(objectiveText(objective))
                 if current >= target then
                     line:setColor('#7fbf6f')
+                    strike(line)
                 end
             end
         end
@@ -389,7 +415,9 @@ local function drawInfo()
     if #view.done > 0 then
         addText(panel, 'JournalHeading', tr('Done'))
         for _, title in ipairs(view.done) do
-            addText(panel, 'JournalText', '- ' .. title):setColor('#7fbf6f')
+            local line = addText(panel, 'JournalObjective', '- ' .. title)
+            line:setColor('#7fbf6f')
+            strike(line)
         end
     end
     if view.stage then
@@ -403,9 +431,10 @@ local function drawInfo()
         end
         for _, objective in ipairs(view.stage.objectives) do
             local current, target = objectiveCount(objective)
-            local line = addText(panel, 'JournalText', '- ' .. objectiveText(objective))
+            local line = addText(panel, 'JournalObjective', '- ' .. objectiveText(objective))
             if current >= target then
                 line:setColor('#7fbf6f')
+                strike(line)
             end
         end
         if #view.rewards > 0 then
@@ -490,7 +519,7 @@ local function drawHint()
     end
     if not any then
         addText(panel, 'JournalText', view.mystery and tr('No clues yet. Talk to people, look around.') or
-            tr('Nothing to show on the map for this step.'))
+            tr('No place to show for this step: finding it is part of the quest.'))
     end
 end
 
@@ -508,8 +537,16 @@ local function drawList()
                     header = addText(list, 'JournalGroup', tr(group.title))
                 end
                 local tags = tagText(view)
-                local row = addText(list, 'JournalQuest', tags ~= '' and (tags .. ' ' .. view.name) or view.name)
+                local row = g_ui.createWidget('JournalQuest', list)
+                row:getChildById('name'):setText(tags ~= '' and (tags .. ' ' .. view.name) or view.name)
                 row.questId = id
+                local mapCheck = row:getChildById('mapCheck')
+                -- only a quest in progress has places (and a mystery quest never shows them)
+                mapCheck:setVisible(view.state == 'active' and not view.mystery)
+                mapCheck:setChecked(isOnMap(id))
+                mapCheck.onCheckChange = function(_, checked)
+                    setOnMap(id, checked)
+                end
                 -- nothing picked yet: the first quest of the list
                 if not selected or not quests[selected] then
                     selected = id

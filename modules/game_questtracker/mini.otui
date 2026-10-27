@@ -21,6 +21,7 @@ QuestMiniObjective < Label
   font: verdana-11px-monochrome
   color: #c0c0c0
   phantom: true
+  layout: anchor
 
 QuestMiniEmpty < Label
   height: 28

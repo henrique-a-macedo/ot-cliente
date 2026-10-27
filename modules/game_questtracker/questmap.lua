@@ -1,7 +1,7 @@
 -- Quest places on the minimap and on the full map (design/quest-tracker.md, section 12.2). A place is a named
--- rectangle with no floor ("Dragon Lair (Venore)"): it is drawn on whatever floor the map shows, as one patch over
--- the whole area, never the spawn spots. Drawn: the places of the tracked quests (current stage), a "!" where an
--- available quest starts (one per spot, the names in the tooltip), and the places the journal asked to see.
+-- rectangle with no floor ("Dragon Lair (Venore)"): it is drawn on whatever floor the map shows, as one see-through
+-- patch over the whole area, never the spawn spots. Drawn: the places of the quests checked in the journal list
+-- (current stage) and the places the journal asked to see (a click on a place opens the full map on it).
 local AREA_STYLE = 'QuestPlaceArea'
 local FOCUS_STYLE = 'QuestPlaceFocus'
 local START_STYLE = 'QuestPlaceStart'
@@ -39,7 +39,7 @@ local function clearOverlays()
     overlays = {}
 end
 
--- the rectangle on the floor the map shows now
+-- the area on the floor the map shows now
 local function anchor(map, widget)
     local z = map:getCameraPosition().z
     widget:breakAnchors()
@@ -116,31 +116,14 @@ function redrawPlaces()
     if not showsPlaces() then
         return
     end
-    local starts = {}
+    -- only the quests checked in the journal list (user, 2026-10-26: not every quest on the minimap)
     for _, id in ipairs(questOrder) do
         local view = quests[id]
-        if view and isTracked(id) then
+        if view and isOnMap(id) then
             for _, entry in ipairs(placesOfView(view)) do
                 addOverlay(map, AREA_STYLE, entry.place, view.name .. ': ' .. entry.text)
             end
         end
-        if view and view.state == 'available' then
-            for _, place in ipairs(view.startPlaces or {}) do
-                local key = place.from.x .. ':' .. place.from.y
-                local spot = starts[key]
-                if not spot then
-                    spot = { place = place, names = {} }
-                    starts[key] = spot
-                end
-                spot.names[#spot.names + 1] = view.name
-            end
-        end
-    end
-    for _, spot in pairs(starts) do
-        local names = spot.names
-        local text = #names > 6 and string.format('%s and %d more', table.concat(names, ', ', 1, 6), #names - 6) or
-            table.concat(names, ', ')
-        addOverlay(map, START_STYLE, spot.place, tr('Quests here: %s', text))
     end
     if focus then
         for _, place in ipairs(focus.places) do
