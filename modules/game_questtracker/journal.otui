@@ -101,13 +101,23 @@ MainWindow
     id: search
     anchors.top: parent.top
     anchors.left: parent.left
-    anchors.right: tagFilter.left
+    anchors.right: stateFilter.left
     margin-right: 8
     height: 22
     padding-left: 6
     padding-top: 3
     placeholder: Search quests
     placeholder-color: #c0c0c0c0
+
+  ComboBox
+    id: stateFilter
+    anchors.top: parent.top
+    anchors.right: tagFilter.left
+    margin-right: 8
+    size: 130 22
+    text-align: left
+    text-offset: 8 3
+    image-clip: 0 0 91 20
 
   ComboBox
     id: tagFilter

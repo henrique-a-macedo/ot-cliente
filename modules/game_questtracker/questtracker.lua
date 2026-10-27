@@ -610,16 +610,21 @@ local function setupJournal()
     journal:hide()
     journal:getChildById('search').onTextChange = onSearchChange
     local filter = journal:getChildById('tagFilter')
-    -- one choice: every quest, by state (in progress, completed) or by tag
-    filter:addOption(tr('All quests'), '')
-    filter:addOption(tr('In progress'), 'state:active')
-    filter:addOption(tr('Completed'), 'state:done')
+    -- two filters that add up: the state (in progress, completed) and the tag
+    filter:addOption(tr('All tags'), '')
     for _, tag in ipairs({ 'main', 'league', 'mystery' }) do
-        filter:addOption('[' .. TAG_NAMES[tag] .. ']', 'tag:' .. tag)
+        filter:addOption('[' .. TAG_NAMES[tag] .. ']', tag)
     end
     filter.onOptionChange = function(_, _, data)
-        stateFilter = data:match('^state:(.+)')
-        tagFilter = data:match('^tag:(.+)')
+        tagFilter = data ~= '' and data or nil
+        drawJournal()
+    end
+    local states = journal:getChildById('stateFilter')
+    states:addOption(tr('All quests'), '')
+    states:addOption(tr('In progress'), 'active')
+    states:addOption(tr('Completed'), 'done')
+    states.onOptionChange = function(_, _, data)
+        stateFilter = data ~= '' and data or nil
         drawJournal()
     end
     journal:getChildById('autoTrackCheck').onCheckChange = function(widget, checked)
