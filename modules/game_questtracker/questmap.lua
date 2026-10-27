@@ -75,7 +75,12 @@ local function add(map, style, hue, from, to, center)
             widget:setBorderColor('#' .. hue .. 'e0')
         end
     end
-    map:insertChild(1, widget)
+    -- areas under everything of the map (cross, flags, buttons); labels over the areas
+    if style == LABEL_STYLE then
+        map:addChild(widget)
+    else
+        map:insertChild(1, widget)
+    end
     widget.from, widget.to, widget.center = from, to, center
     anchor(map, widget)
     overlays[#overlays + 1] = widget
@@ -132,7 +137,7 @@ local function placesOf(id)
     return list
 end
 
-local function drawPlace(map, place, hue, questName)
+local function drawArea(map, place, hue)
     local size = place.cell
     if place.cells and size and #place.cells > 0 then
         for i = 1, #place.cells, 2 do
@@ -142,6 +147,9 @@ local function drawPlace(map, place, hue, questName)
     else
         add(map, AREA_STYLE, hue, place.from, place.to)
     end
+end
+
+local function drawLabel(map, place, hue, questName)
     local center = { x = math.floor((place.from.x + place.to.x) / 2), y = math.floor((place.from.y + place.to.y) / 2) }
     local label = add(map, LABEL_STYLE, hue, nil, nil, center)
     local text = placeList(place)
@@ -171,10 +179,15 @@ function redrawPlaces()
             drawn[#drawn + 1] = id
         end
     end
+    -- every area first, then every label on top
     for index, id in ipairs(drawn) do
-        local hue = HUES[(index - 1) % #HUES + 1]
         for _, place in ipairs(placesOf(id)) do
-            drawPlace(map, place, hue, #drawn > 1 and quests[id].name or nil)
+            drawArea(map, place, HUES[(index - 1) % #HUES + 1])
+        end
+    end
+    for index, id in ipairs(drawn) do
+        for _, place in ipairs(placesOf(id)) do
+            drawLabel(map, place, HUES[(index - 1) % #HUES + 1], #drawn > 1 and quests[id].name or nil)
         end
     end
 end
@@ -260,7 +273,8 @@ function showPlaces(questId, clicked)
         map:setCameraPosition({
             x = math.floor((clicked.from.x + clicked.to.x) / 2),
             y = math.floor((clicked.from.y + clicked.to.y) / 2),
-            z = clicked.z or map:getCameraPosition().z
+            -- the floor the player is looking at: the minimap is black on floors not explored yet
+            z = map:getCameraPosition().z
         })
     end
     requestMapPlaces()
