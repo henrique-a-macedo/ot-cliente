@@ -12,7 +12,6 @@ Module
     - game_inventory
     - game_mainpanel
     - game_hotkeys
-    - game_questlog
     - game_textmessage
     - game_console
     - game_outfit
@@ -31,6 +30,7 @@ Module
     - game_reforge
     - game_buffs
     - game_pouch
+    - game_questtracker
     - game_talents
     - game_spelllist
     - game_modaldialog

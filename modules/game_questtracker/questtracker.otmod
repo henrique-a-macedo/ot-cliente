@@ -1,0 +1,8 @@
+Module
+  name: game_questtracker
+  description: WoW-style quest tracker (mini window) and quest journal (server opcode 126)
+  author: henrique
+  sandboxed: true
+  scripts: [ questtracker, questmap ]
+  @onLoad: init()
+  @onUnload: terminate()

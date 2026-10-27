@@ -1,0 +1,255 @@
+// the quest journal (design/quest-tracker.md, 12.6): search and tag filter on top, then one screen with three columns,
+// all visible at once:
+// Quest List = the player's quests (in progress, done), with tags
+// Info       = the selected quest: description, rewards, stages done and the current one
+// Hints      = where to go (places, clickable: the full map shows them) and the clues found (click: where it came from)
+JournalGroup < Label
+  height: 18
+  margin-top: 6
+  padding-left: 2
+  font: verdana-11px-rounded
+  color: #e8c46a
+  phantom: true
+
+  $first:
+    margin-top: 0
+
+// a quest of the list: the check tracks it (the mini window), the name picks it
+JournalQuest < UIWidget
+  height: 18
+  focusable: true
+  background-color: alpha
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover:
+    background-color: #ffffff14
+
+  $focus:
+    background-color: #ffffff22
+
+  CheckBox
+    id: trackCheck
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    size: 14 14
+    !tooltip: tr('Track this quest (mini window)')
+
+  // the GPS of this quest: one active at a time, a second click turns it off
+  UIButton
+    id: gps
+    size: 14 14
+    anchors.right: parent.right
+    anchors.verticalCenter: parent.verticalCenter
+    margin-right: 4
+    icon: /game_questtracker/images/gps-arrow
+    icon-size: 12 12
+    icon-color: #808080
+    !tooltip: tr('GPS: guide me to this quest')
+
+    $hover:
+      icon-color: #e0e0e0
+
+    $on:
+      icon-color: #ffc828
+
+  Label
+    id: name
+    anchors.left: trackCheck.right
+    anchors.right: gps.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 4
+    color: #dfdfdf
+    phantom: true
+
+// a line struck through: an objective or a stage already done
+JournalStrike < UIWidget
+  height: 1
+  background-color: #7fbf6f
+  phantom: true
+
+JournalHeading < Label
+  margin-top: 8
+  font: verdana-11px-rounded
+  color: #e8c46a
+  text-auto-resize: true
+
+  $first:
+    margin-top: 0
+
+JournalText < Label
+  margin-top: 2
+  color: #c0c0c0
+  text-wrap: true
+  text-auto-resize: true
+
+// an objective line: no wrap, so a strike can follow the text width
+JournalObjective < Label
+  margin-top: 2
+  color: #c0c0c0
+  text-auto-resize: true
+  layout: anchor
+
+JournalTitle < Label
+  font: verdana-11px-rounded
+  color: #ffffff
+  text-wrap: true
+  text-auto-resize: true
+
+// a place or a clue: clicking does something (a Label is phantom by default: UILabel.create)
+JournalLink < Label
+  phantom: false
+  margin-top: 2
+  padding-left: 8
+  color: #8fc4ff
+  text-wrap: true
+  text-auto-resize: true
+  change-cursor-image: true
+  cursor: pointer
+
+  $hover:
+    color: #c4e0ff
+
+JournalColumnTitle < Label
+  font: verdana-11px-rounded
+  color: #e8c46a
+  height: 16
+
+JournalPanel < ScrollablePanel
+  anchors.top: listTitle.bottom
+  anchors.bottom: autoTrackCheck.top
+  margin-top: 4
+  margin-bottom: 8
+  padding: 4
+  background-color: #00000040
+  layout:
+    type: verticalBox
+
+// each scroll bar sits right after its column and is anchored to what comes before it (a scroll bar anchored to
+// the panel that anchors to it loops, and the loop closed the client)
+JournalScroll < VerticalScrollBar
+  anchors.top: listTitle.bottom
+  anchors.bottom: autoTrackCheck.top
+  margin-top: 4
+  margin-bottom: 8
+  step: 16
+  pixels-scroll: true
+
+MainWindow
+  id: questJournal
+  !text: tr('Quest Journal')
+  size: 860 500
+  visible: false
+  @onEscape: modules.game_questtracker.closeJournal()
+
+  // search and tag filter on one line, same height; the default combo box offset (-15) is made for 91 px
+  TextEdit
+    id: search
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: stateFilter.left
+    margin-right: 8
+    height: 22
+    padding-left: 6
+    padding-top: 3
+    placeholder: Search quests
+    placeholder-color: #c0c0c0c0
+
+  ComboBox
+    id: stateFilter
+    anchors.top: parent.top
+    anchors.right: tagFilter.left
+    margin-right: 8
+    size: 130 22
+    text-align: left
+    text-offset: 8 0
+    image-clip: 0 0 91 20
+
+  ComboBox
+    id: tagFilter
+    anchors.top: parent.top
+    anchors.right: parent.right
+    size: 130 22
+    text-align: left
+    text-offset: 8 0
+    image-clip: 0 0 91 20
+
+  JournalColumnTitle
+    id: listTitle
+    !text: tr('Quest List')
+    anchors.top: search.bottom
+    anchors.left: parent.left
+    margin-top: 8
+    width: 210
+
+  TextList
+    id: questList
+    vertical-scrollbar: listScroll
+    anchors.top: listTitle.bottom
+    anchors.left: parent.left
+    anchors.bottom: autoTrackCheck.top
+    margin-top: 4
+    margin-bottom: 8
+    width: 210
+    padding: 2
+    focusable: false
+
+  JournalScroll
+    id: listScroll
+    anchors.left: questList.right
+
+  JournalColumnTitle
+    id: infoTitle
+    !text: tr('Info')
+    anchors.top: search.bottom
+    anchors.left: listScroll.right
+    margin-top: 8
+    margin-left: 10
+    width: 300
+
+  JournalPanel
+    id: info
+    vertical-scrollbar: infoScroll
+    anchors.left: listScroll.right
+    margin-left: 10
+    width: 300
+
+  JournalScroll
+    id: infoScroll
+    anchors.left: info.right
+
+  JournalColumnTitle
+    id: hintTitle
+    !text: tr('Hints')
+    anchors.top: search.bottom
+    anchors.left: infoScroll.right
+    margin-top: 8
+    margin-left: 10
+    width: 200
+
+  JournalScroll
+    id: hintScroll
+    anchors.right: parent.right
+
+  JournalPanel
+    id: hint
+    vertical-scrollbar: hintScroll
+    anchors.left: infoScroll.right
+    anchors.right: hintScroll.left
+    margin-left: 10
+
+  CheckBox
+    id: autoTrackCheck
+    !text: tr('Track new quests')
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    width: 130
+
+  Button
+    id: closeButton
+    !text: tr('Close')
+    width: 64
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    @onClick: modules.game_questtracker.closeJournal()
