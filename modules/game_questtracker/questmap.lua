@@ -137,6 +137,53 @@ local function aim(position)
     return marker, nil
 end
 
+-- the next step that is not walking (a floor change, a trip) after the current walk, if any
+function upcoming()
+    if not route then
+        return nil
+    end
+    for index = route.leg, #route.legs do
+        local leg = route.legs[index]
+        if leg.kind == 'floor' then
+            return leg.at, FLOOR_TEXT[leg.how] or tr('Change floor here')
+        elseif leg.kind == 'travel' then
+            return leg.at, tr('Travel: ask %s for "%s"', leg.npc, leg.keyword)
+        end
+    end
+    return nil
+end
+
+-- the next floor change on the minimap too (an up or down arrow), so the ramp is seen from afar
+local STEP_ICON = { up = 14, ladder = 14, rope = 14, down = 15, sewer = 15, shovel = 15 }
+local stepFlag = nil
+function markUpcoming()
+    local map = findMinimap()
+    if not map then
+        return
+    end
+    local leg = nil
+    for index = route and route.leg or 1, route and #route.legs or 0 do
+        if route.legs[index].kind == 'floor' then
+            leg = route.legs[index]
+            break
+        elseif route.legs[index].kind == 'travel' then
+            break
+        end
+    end
+    local at = leg and leg.at
+    if stepFlag and at and stepFlag.x == at.x and stepFlag.y == at.y and stepFlag.z == at.z then
+        return
+    end
+    if stepFlag then
+        map:removeFlag(stepFlag)
+        stepFlag = nil
+    end
+    if at then
+        stepFlag = { x = at.x, y = at.y, z = at.z }
+        map:addFlag(stepFlag, STEP_ICON[leg.how] or 14, FLOOR_TEXT[leg.how] or tr('Change floor here'), true)
+    end
+end
+
 -- the arrow: rotated towards where to go now (0 = north, clockwise), the place, the squares and the instruction
 local function updateGps()
     if not gps or not target then
@@ -184,12 +231,20 @@ local function updateGps()
         lines[#lines + 1] = string.format('%d %s', chebyshev(position, goal), tr('sqm'))
     else
         lines[#lines + 1] = string.format('%d %s%s', distance, tr('sqm'), floors)
+        -- while walking, what comes next (a ramp, a ladder, a boat) and how far: seen before getting there
+        local nextAt, nextText = upcoming()
+        if nextAt then
+            lines[#lines + 1] = tr('Next: %s (%d %s)', nextText, chebyshev(position, nextAt), tr('sqm'))
+        end
     end
     text:setText(table.concat(lines, '\n'))
+    markUpcoming()
 end
 
 function stopGuide()
     target = nil
+    route = nil
+    markUpcoming()
     route = nil
     lastPosition = nil
     clearFlag()
