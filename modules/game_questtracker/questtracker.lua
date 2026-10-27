@@ -168,6 +168,7 @@ local function onMessage(protocol, opcode, data)
             saveSettings()
         end
         signalcall(onQuestUpdate, before, view)
+        onGuidedQuestChanged(view)
         changed(view.id)
     elseif data.action == 'places' then
         onPlacesMessage(data)
@@ -205,8 +206,17 @@ local function drawMini()
             local title = g_ui.createWidget('QuestMiniTitle', list)
             title:setText(view.name)
             title:setTooltip(view.stage and (view.stage.title .. ': ' .. view.stage.text) or view.name)
+            -- a click guides to the nearest place of the step (the quest helper); the journal is in the menu
             title.onClick = function()
-                openJournal(id)
+                local place = nearestPlaceOf(view)
+                if place then
+                    guideTo(id, place)
+                else
+                    openJournal(id)
+                end
+            end
+            if guidedQuest() == id then
+                title:setText('> ' .. view.name)
             end
             title.onMouseRelease = function(widget, mousePos, mouseButton)
                 if mouseButton ~= MouseRightButton then
@@ -220,6 +230,14 @@ local function drawMini()
                 menu:addOption(tr('Open in the journal'), function()
                     openJournal(id)
                 end)
+                if nearestPlaceOf(view) then
+                    menu:addOption(tr('Guide me there'), function()
+                        guideTo(id, nearestPlaceOf(view))
+                    end)
+                end
+                if guidedQuest() == id then
+                    menu:addOption(tr('Stop guiding'), stopGuide)
+                end
                 menu:display(mousePos)
                 return true
             end
@@ -243,6 +261,11 @@ local function drawMini()
         local empty = g_ui.createWidget('QuestMiniEmpty', list)
         empty:setText(tr('No quest tracked. Open the quest journal to track one.'))
     end
+end
+
+-- the GPS changed its quest: the mini window marks the guided one
+function refreshMini()
+    drawMini()
 end
 
 -- "Quest started / updated / completed" on screen when a tracked quest moves
@@ -419,9 +442,6 @@ local function addPlaceLinks(panel, view, objectiveIndex, places, label, more)
         link.onClick = function()
             showPlaces(view.id, place)
         end
-    end
-    if more then
-        addText(panel, 'JournalText', tr('More on the map.'))
     end
 end
 

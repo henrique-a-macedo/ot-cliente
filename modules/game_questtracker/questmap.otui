@@ -1,24 +1,41 @@
-// quest places on the full map (questmap.lua); the colour of each quest is set in Lua
-
-// one cell (8, 16... tiles) of a hunting ground that has a spawn: together they draw the shape of the ground
-QuestPlaceCell < UIWidget
-  phantom: true
-  background-color: #ff3b3080
-
-// a place without a shape (an NPC, an area to reach, before the shapes arrive)
-QuestPlaceArea < UIWidget
-  phantom: true
-  background-color: #ff3b3080
+// the quest GPS (questmap.lua): at the top of the game screen, an arrow towards the marker, the place and the squares
+QuestGps < UIWidget
+  size: 230 40
+  anchors.top: parent.top
+  anchors.horizontalCenter: parent.horizontalCenter
+  margin-top: 40
+  background-color: #000000b0
   border-width: 1
-  border-color: #ff3b30e0
+  border-color: #e8c46a80
+  focusable: false
+  visible: false
 
-// the list over a place: (quest,) place, then one line per monster; dark backing, a border in the quest colour
-QuestPlaceLabel < Label
-  font: verdana-11px-antialised
-  color: #ffffff
-  background-color: #000000c0
-  border-width: 1
-  border-color: #ff3b30
-  padding: 2 5 2 5
-  text-auto-resize: true
-  phantom: true
+  UIWidget
+    id: arrow
+    size: 28 28
+    anchors.left: parent.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 6
+    image-source: /game_questtracker/images/gps-arrow
+    phantom: true
+
+  Label
+    id: text
+    anchors.left: arrow.right
+    anchors.right: close.left
+    anchors.verticalCenter: parent.verticalCenter
+    margin-left: 8
+    font: verdana-11px-antialised
+    color: #ffffff
+    text-auto-resize: true
+    phantom: true
+
+  UIButton
+    id: close
+    size: 14 14
+    anchors.top: parent.top
+    anchors.right: parent.right
+    margin: 3
+    text: x
+    color: #c0c0c0
+    !tooltip: tr('Stop guiding')
