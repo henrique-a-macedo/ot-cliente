@@ -86,6 +86,12 @@ local function load(version)
 
     loaded = #errorList == 0
     if loaded then
+        -- the server blocks passage on the pot (items.xml 2562, as in the 8.0); the 13.10 appearance (client id 3465)
+        -- is walkable, so the character would step and be pulled back
+        local pot = g_things.getThingType(3465, ThingCategoryItem)
+        if pot then
+            pot:setWalkable(false)
+        end
         -- this server ships without sounds: the 13.10 ones are wav, which the client cannot play
         return
     end

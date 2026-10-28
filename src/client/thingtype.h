@@ -194,6 +194,7 @@ public:
     // additional
     float getOpacity() { return m_opacity; }
     void setPathable(bool var);
+    void setWalkable(bool var);
     int getExactHeight();
     const TexturePtr& getTexture(int animationPhase);
 
