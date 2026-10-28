@@ -331,6 +331,7 @@ void Client::registerLuaFunctions()
     g_lua.bindSingletonFunction("g_game", "closeRuleViolation", &Game::closeRuleViolation, &g_game);
     g_lua.bindSingletonFunction("g_game", "cancelRuleViolation", &Game::cancelRuleViolation, &g_game);
     g_lua.bindSingletonFunction("g_game", "reportBug", &Game::reportBug, &g_game);
+    g_lua.bindSingletonFunction("g_game", "reportPlayer", &Game::reportPlayer, &g_game);
     g_lua.bindSingletonFunction("g_game", "reportRuleViolation", &Game::reportRuleViolation, &g_game);
     g_lua.bindSingletonFunction("g_game", "debugReport", &Game::debugReport, &g_game);
     g_lua.bindSingletonFunction("g_game", "editText", &Game::editText, &g_game);

@@ -1,0 +1,8 @@
+Module
+  name: game_report
+  description: Player report window (button in the main panel and "Report" in the player menu, no hotkey)
+  author: henrique
+  sandboxed: true
+  scripts: [ report ]
+  @onLoad: init()
+  @onUnload: terminate()

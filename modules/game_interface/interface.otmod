@@ -26,6 +26,7 @@ Module
     - game_playerdeath
     - game_playermount
     - game_ruleviolation
+    - game_report
     - game_market
     - game_reforge
     - game_buffs
