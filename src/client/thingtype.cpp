@@ -1115,6 +1115,14 @@ void ThingType::setPathable(const bool var)
         m_flags |= ThingFlagAttrNotPathable;
 }
 
+void ThingType::setWalkable(const bool var)
+{
+    if (var)
+        m_flags &= ~ThingFlagAttrNotWalkable;
+    else
+        m_flags |= ThingFlagAttrNotWalkable;
+}
+
 int ThingType::getExactHeight()
 {
     if (m_null)
