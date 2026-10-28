@@ -1,0 +1,63 @@
+ReportWindow < MainWindow
+  !text: tr('Report a player')
+  size: 300 300
+  @onEscape: self:hide()
+
+  Label
+    id: nameLabel
+    !text: tr('Player name')
+    anchors.top: parent.top
+    anchors.left: parent.left
+
+  TextEdit
+    id: nameEdit
+    anchors.top: nameLabel.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+    max-length: 64
+
+  Label
+    id: reasonLabel
+    !text: tr('Reason')
+    anchors.top: nameEdit.bottom
+    anchors.left: parent.left
+    margin-top: 8
+
+  ComboBox
+    id: reasonBox
+    anchors.top: reasonLabel.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    margin-top: 2
+
+  Label
+    id: commentLabel
+    !text: tr('Comment')
+    anchors.top: reasonBox.bottom
+    anchors.left: parent.left
+    margin-top: 8
+
+  MultilineTextEdit
+    id: commentEdit
+    anchors.top: commentLabel.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: sendButton.top
+    margin-top: 2
+    margin-bottom: 8
+
+  Button
+    id: sendButton
+    !text: tr('Send')
+    anchors.bottom: cancelButton.bottom
+    anchors.right: cancelButton.left
+    margin-right: 10
+    width: 80
+
+  Button
+    id: cancelButton
+    !text: tr('Cancel')
+    anchors.bottom: parent.bottom
+    anchors.right: parent.right
+    width: 80

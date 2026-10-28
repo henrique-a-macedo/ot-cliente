@@ -925,6 +925,12 @@ function createThingMenu(menuPosition, lookThing, useThing, creatureThing)
             end)
         end
 
+        if creatureThing:isPlayer() and not creatureThing:isLocalPlayer() then
+            menu:addOption(tr('Report'), function()
+                modules.game_report.show(creatureThing:getName())
+            end)
+        end
+
         menu:addSeparator()
         menu:addOption(tr('Copy Name'), function()
             g_window.setClipboardText(creatureThing:getName())

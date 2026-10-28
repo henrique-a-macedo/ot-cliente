@@ -278,6 +278,7 @@ public:
 
     // reports
     void reportBug(std::string_view comment);
+    void reportPlayer(uint8_t type, uint8_t reason, std::string_view target, std::string_view comment);
     void reportRuleViolation(std::string_view target, uint8_t reason, uint8_t action, std::string_view comment, std::string_view statement, uint16_t statementId, bool ipBanishment);
     void debugReport(std::string_view a, std::string_view b, std::string_view c, std::string_view d);
 

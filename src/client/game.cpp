@@ -1493,6 +1493,14 @@ void Game::reportRuleViolation(const std::string_view target, const uint8_t reas
     m_protocolGame->sendRuleViolation(target, reason, action, comment, statement, statementId, ipBanishment);
 }
 
+void Game::reportPlayer(const uint8_t type, const uint8_t reason, const std::string_view target, const std::string_view comment)
+{
+    if (!canPerformGameAction())
+        return;
+
+    m_protocolGame->sendNewNewRuleViolation(type, reason, target, comment, "");
+}
+
 void Game::debugReport(const std::string_view a, const std::string_view b, const std::string_view c, const std::string_view d)
 {
     m_protocolGame->sendDebugReport(a, b, c, d);

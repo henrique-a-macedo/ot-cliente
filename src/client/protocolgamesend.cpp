@@ -1068,6 +1068,9 @@ void ProtocolGame::sendRequestQuestLine(const uint16_t questId)
     send(msg);
 }
 
+// Player report (server ProtocolGame::parseRuleViolationReport, 0xF2): type, reason, target, comment, then a
+// translation for name (0) and statement (1) reports and a statement id for statement reports. The bot report (2)
+// carries nothing more. The first two arguments keep the old names: "reason" is the report type, "action" the reason.
 void ProtocolGame::sendNewNewRuleViolation(const uint8_t reason, const uint8_t action, const std::string_view characterName, const std::string_view comment, const std::string_view translation)
 {
     const auto& msg = std::make_shared<OutputMessage>();
@@ -1076,7 +1079,10 @@ void ProtocolGame::sendNewNewRuleViolation(const uint8_t reason, const uint8_t a
     msg->addU8(action);
     msg->addString(characterName);
     msg->addString(comment);
-    msg->addString(translation);
+    if (reason == 0 || reason == 1)
+        msg->addString(translation);
+    if (reason == 1)
+        msg->addU32(0);
     send(msg);
 }
 
