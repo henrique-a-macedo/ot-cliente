@@ -1,18 +1,37 @@
--- Talent and paragon trees (server opcode 123, forgottenserver data/scripts/lib/talents.lua).
--- The server sends each node with its grid position, rank and whether it can be learned; the window draws the nodes
--- on a canvas with lines from each prerequisite and buys a node on click (the server checks everything again).
+-- Talent and paragon trees (server opcode 123, forgottenserver data/scripts/creaturescripts/player/talents_tree.lua).
+-- The server sends the layout once per session ("layout": nodes with grid cell, links, kind) and a small "state"
+-- after every change (ranks, free points, which nodes can be learned now). The window draws the nodes on a canvas
+-- that can be dragged and zoomed, the links as thin rotated widgets, and buys a node on click (the server checks
+-- everything again).
 local OPCODE = 123
-local COLUMN_WIDTH = 140
-local ROW_HEIGHT = 70
-local MARGIN = 14
-local LINK_WIDTH = 2
+local MIN_CELL, MAX_CELL, DEFAULT_CELL = 6, 30, 12
+-- paragon nodes come in columns/rows, not grid cells
+local PARAGON_SCALE = 7
 local RESULT_COLORS = { ok = '#7fd77f', error = '#e06060' }
-local BORDER = { learned = '#d8b03c', available = '#3c8d3c', blocked = '#4a4a4a' }
-local LINK = { learned = '#d8b03c', other = '#5a5a5a' }
+local BORDER = { learned = '#d8b03c', available = '#3c8d3c', locked = '#4a4a4a' }
+local LINK = { learned = '#d8b03c', other = '#4a4a4a' }
+-- size (at the default cell) and background of each kind of node
+local KINDS = {
+    inicio = { 30, '#4a4a1f', 'Start' }, portal = { 26, '#1f3a4a', 'Portal' }, pequeno = { 16, '#2a2a2a', 'Talent' },
+    notavel = { 22, '#3a2f1a', 'Notable' }, ['pedra-angular'] = { 28, '#4a1f1f', 'Keystone' },
+    marco = { 22, '#2f1f4a', 'Level talent' }, ['notavel-de-classe'] = { 22, '#1f4a2f', 'Class notable' },
+    ['pedra-angular-de-classe'] = { 28, '#4a1f1f', 'Class keystone' }, maestria = { 22, '#1f4a2f', 'Mastery' },
+    despertar = { 26, '#1f4a2f', 'Awakening' }, paragon = { 36, '#2a2a3a', 'Paragon' }
+}
 
 talentsWindow = nil
 local talentsButton = nil
-local currentTree = 'talent'
+local state = {
+    tree = 'talent',
+    layouts = {}, -- [tree] = layout message
+    states = {}, -- [tree] = state message
+    cell = { talent = DEFAULT_CELL, paragon = DEFAULT_CELL },
+    offset = {}, -- [tree] = { x, y } of the grid origin inside the canvas
+    nodeWidgets = {}, -- [node id] = widget
+    linkWidgets = {}, -- { widget, from, to }
+    drawn = nil, -- tree whose widgets are on the canvas
+    drag = nil
+}
 
 local function send(text)
     local protocol = g_game.getProtocolGame()
@@ -26,116 +45,163 @@ local function setResult(status, message)
     talentsWindow.resultLabel:setColor(RESULT_COLORS[status] or '#c0c0c0')
 end
 
-local function nodeState(node)
-    if node.blocked == '' then
-        return 'available'
+local function kindOf(node)
+    return KINDS[node.kind] or KINDS.pequeno
+end
+
+local function nodeState(tree, node)
+    local current = state.states[tree]
+    if not current then
+        return 'locked', 0
     end
-    return node.rank > 0 and 'learned' or 'blocked'
+    local rank = current.ranks[node.id] or 0
+    if current.availableSet[node.id] then
+        return 'available', rank
+    end
+    return rank > 0 and 'learned' or 'locked', rank
 end
 
--- offset of a node inside the canvas
-local function nodeRect(node)
-    return { x = math.floor(MARGIN + node.x * COLUMN_WIDTH), y = math.floor(MARGIN + node.y * ROW_HEIGHT) }
+local function scaleOf(tree)
+    return tree == 'paragon' and PARAGON_SCALE or 1
 end
 
--- children are anchored to the canvas corner with margins, so they follow the window when it moves
-local function place(widget, rect)
+-- center of a node inside the canvas
+local function nodeCenter(tree, node)
+    local cell, offset = state.cell[tree], state.offset[tree]
+    local scale = scaleOf(tree)
+    return offset.x + node.x * scale * cell, offset.y + node.y * scale * cell
+end
+
+local function place(widget, x, y, width, height)
     widget:addAnchor(AnchorTop, 'parent', AnchorTop)
     widget:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-    widget:setMarginTop(rect.y)
-    widget:setMarginLeft(rect.x)
-    if rect.width then
-        widget:setSize({ width = rect.width, height = rect.height })
+    widget:setMarginTop(math.floor(y))
+    widget:setMarginLeft(math.floor(x))
+    widget:setSize({ width = math.max(1, math.floor(width)), height = math.max(1, math.floor(height)) })
+end
+
+local function reposition()
+    local tree = state.drawn
+    if not tree then
+        return
+    end
+    local zoom = state.cell[tree] / DEFAULT_CELL
+    local byId = state.layouts[tree].byId
+    for _, entry in ipairs(state.linkWidgets) do
+        local ax, ay = nodeCenter(tree, byId[entry.from])
+        local bx, by = nodeCenter(tree, byId[entry.to])
+        local length = math.sqrt((bx - ax) ^ 2 + (by - ay) ^ 2)
+        place(entry.widget, (ax + bx) / 2 - length / 2, (ay + by) / 2 - 1, length, 2)
+        entry.widget:setRotation(math.deg(math.atan2(by - ay, bx - ax)))
+    end
+    for id, widget in pairs(state.nodeWidgets) do
+        local node = byId[id]
+        local size = kindOf(node)[1] * math.max(0.6, zoom)
+        local x, y = nodeCenter(tree, node)
+        place(widget, x - size / 2, y - size / 2, size, size)
     end
 end
 
--- a line from `from` to the top of `to`. Next row: an L from the bottom (down, across, down). Further down (the
--- cross nodes sit between two columns): out of the side of `from`, then straight down the gap between the columns,
--- so it never runs behind the nodes in between and looks like it starts at them
-local function link(from, to, color)
-    local canvas = talentsWindow.canvas
-    local a, b = nodeRect(from), nodeRect(to)
-    local ax, bx, by = a.x + 46, b.x + 46, b.y
-    local pieces
-    if to.y - from.y > 1 and math.abs(bx - ax) > 46 then
-        local sideY = a.y + 22
-        local edge = bx > ax and a.x + 92 or a.x
-        pieces = {
-            { x = math.min(edge, bx), y = sideY, width = math.abs(bx - edge) + LINK_WIDTH, height = LINK_WIDTH },
-            { x = bx, y = sideY, width = LINK_WIDTH, height = by - sideY }
-        }
-    else
-        local ay = a.y + 46
-        local midY = math.floor((ay + by) / 2)
-        pieces = {
-            { x = ax, y = ay, width = LINK_WIDTH, height = midY - ay },
-            { x = math.min(ax, bx), y = midY, width = math.abs(bx - ax) + LINK_WIDTH, height = LINK_WIDTH },
-            { x = bx, y = midY, width = LINK_WIDTH, height = by - midY }
-        }
+local function tooltip(tree, node)
+    local status, rank = nodeState(tree, node)
+    local lines = { node.name, tr(kindOf(node)[3]) }
+    table.insert(lines, node.maxRank > 0 and tr('Rank: %d/%d', rank, node.maxRank) or tr('Rank: %d (no limit)', rank))
+    table.insert(lines, tr('Each rank: %s', node.text))
+    if node.level and node.level > 0 then
+        table.insert(lines, tr('Opens at level %d.', node.level))
     end
-    for _, rect in ipairs(pieces) do
-        if rect.width > 0 and rect.height > 0 then
-            local piece = g_ui.createWidget('TalentLink', canvas)
-            place(piece, rect)
-            piece:setBackgroundColor(color)
-        end
+    if node.class and node.class ~= '' then
+        table.insert(lines, tr('Class branch: %s', node.class))
     end
-end
-
-local function tooltip(node)
-    local lines = { node.name, tr('Each rank: %s', node.text), tr('Cost: %d point(s)', node.cost) }
-    if node.maxRank > 0 then
-        table.insert(lines, tr('Rank: %d/%d', node.rank, node.maxRank))
-    else
-        table.insert(lines, tr('Rank: %d (no limit)', node.rank))
-    end
-    if node.blocked ~= '' then
-        table.insert(lines, node.blocked)
-    else
+    if status == 'available' then
         table.insert(lines, tr('Click to learn.'))
+    elseif rank == 0 then
+        table.insert(lines, tr('Not available yet.'))
     end
     return table.concat(lines, '\n')
 end
 
-local function render(data)
-    currentTree = data.tree
-    talentsWindow:setText(data.name)
-    talentsWindow.points:setText(tr('Free points: %d', data.free))
-    talentsWindow.talentTab:setOn(data.tree == 'talent')
-    talentsWindow.paragonTab:setOn(data.tree == 'paragon')
-
-    local canvas = talentsWindow.canvas
-    canvas:destroyChildren()
-
-    local byId = {}
-    for _, node in ipairs(data.nodes) do
-        byId[node.id] = node
+local function paintState(tree)
+    if state.drawn ~= tree then
+        return
     end
+    local current = state.states[tree]
+    local byId = state.layouts[tree].byId
+    for id, widget in pairs(state.nodeWidgets) do
+        local node = byId[id]
+        local status, rank = nodeState(tree, node)
+        widget:setBorderColor(BORDER[status])
+        widget:setText(rank > 0 and tostring(rank) or '')
+        widget:setTooltip(tooltip(tree, node))
+        widget:setOpacity(status == 'locked' and rank == 0 and 0.55 or 1)
+    end
+    for _, entry in ipairs(state.linkWidgets) do
+        local learned = (current.ranks[entry.from] or 0) > 0 and (current.ranks[entry.to] or 0) > 0
+        entry.widget:setBackgroundColor(learned and LINK.learned or LINK.other)
+    end
+    talentsWindow.points:setText(tr('Free points: %d', current.free))
+    if tree == 'talent' then
+        talentsWindow.keystones:setText(tr('Keystones: %d/%d', current.keystones, current.maxKeystones))
+        talentsWindow.resetButton:setVisible(true)
+        talentsWindow.resetButton:setText(current.resetCost > 0 and tr('Reset (%d gp)', current.resetCost) or tr('Reset (free)'))
+        talentsWindow.resetButton:setEnabled(current.atTemple)
+        talentsWindow.resetButton:setTooltip(current.atTemple and '' or tr('Talents are reset at the temple.'))
+    else
+        talentsWindow.keystones:setText('')
+        talentsWindow.resetButton:setVisible(false)
+    end
+end
 
-    -- lines first, so the nodes are drawn over them
-    for _, node in ipairs(data.nodes) do
-        for _, requiredId in ipairs(node.requires) do
-            local required = byId[requiredId]
-            if required then
-                link(required, node, required.rank > 0 and LINK.learned or LINK.other)
+function center()
+    local tree = state.tree
+    local canvas = talentsWindow.canvas
+    state.offset[tree] = { x = canvas:getWidth() / 2, y = canvas:getHeight() / 2 }
+    if tree == 'paragon' then
+        state.offset[tree] = { x = 60, y = 60 }
+    end
+    reposition()
+end
+
+local function draw(tree)
+    local layout = state.layouts[tree]
+    local canvas = talentsWindow.canvas
+    -- keep the hint label, drop everything else
+    for _, child in ipairs(canvas:getChildren()) do
+        child:destroy()
+    end
+    state.nodeWidgets, state.linkWidgets, state.drawn = {}, {}, tree
+    talentsWindow:setText(layout.name)
+    talentsWindow.talentTab:setOn(tree == 'talent')
+    talentsWindow.paragonTab:setOn(tree == 'paragon')
+
+    -- links first, so the nodes are drawn over them; each pair once
+    local seen = {}
+    for _, node in ipairs(layout.nodes) do
+        for _, other in ipairs(node.links) do
+            local key = node.id < other and (node.id .. '|' .. other) or (other .. '|' .. node.id)
+            if layout.byId[other] and not seen[key] then
+                seen[key] = true
+                table.insert(state.linkWidgets,
+                    { widget = g_ui.createWidget('TalentLink', canvas), from = node.id, to = other })
             end
         end
     end
-
-    for _, node in ipairs(data.nodes) do
+    for _, node in ipairs(layout.nodes) do
         local widget = g_ui.createWidget('TalentNode', canvas)
-        place(widget, nodeRect(node))
-        widget:setText(node.name)
-        widget.rank:setText(node.maxRank > 0 and string.format('%d/%d', node.rank, node.maxRank) or tostring(node.rank))
-        local state = nodeState(node)
-        widget:setBorderColor(BORDER[state])
-        -- nodes stay opaque so the connector lines pass behind them; a blocked node only dims its text
-        widget:setColor(state == 'blocked' and '#7a7a7a' or '#dfdfdf')
-        widget:setTooltip(tooltip(node))
+        widget:setBackgroundColor(kindOf(node)[2])
         local nodeId = node.id
         widget.onClick = function()
-            send(string.format('buy:%s:%s', currentTree, nodeId))
+            send(string.format('buy:%s:%s', state.tree, nodeId))
         end
+        state.nodeWidgets[node.id] = widget
+    end
+    if not state.offset[tree] then
+        center()
+    else
+        reposition()
+    end
+    if state.states[tree] then
+        paintState(tree)
     end
 end
 
@@ -143,23 +209,114 @@ local function onMessage(protocol, opcode, data)
     if not talentsWindow or type(data) ~= 'table' then
         return
     end
-    if data.action == 'tree' then
-        render(data)
+    if data.action == 'layout' then
+        data.byId = {}
+        for _, node in ipairs(data.nodes) do
+            data.byId[node.id] = node
+        end
+        state.layouts[data.tree] = data
+        if data.tree == state.tree then
+            draw(data.tree)
+        end
+    elseif data.action == 'state' then
+        data.availableSet = {}
+        for _, id in ipairs(data.available) do
+            data.availableSet[id] = true
+        end
+        state.states[data.tree] = data
+        if data.tree == state.tree and state.drawn ~= data.tree and state.layouts[data.tree] then
+            draw(data.tree)
+        end
+        paintState(data.tree)
     elseif data.action == 'result' then
         setResult(data.status, data.message)
     end
 end
 
 function open(tree)
+    state.tree = tree
     setResult(nil, '')
+    if state.layouts[tree] and state.drawn ~= tree then
+        draw(tree)
+    end
     send('open:' .. tree)
+end
+
+function askReset()
+    local current = state.states.talent
+    if not current then
+        return
+    end
+    local message = current.resetCost > 0 and tr('Reset every talent for %d gold? Your points come back.', current.resetCost) or
+        tr('Your next reset is free. Reset every talent now?')
+    local box
+    local function close()
+        if box then
+            box:destroy()
+            box = nil
+        end
+    end
+    box = displayGeneralBox(tr('Reset talents'), message, {
+        { text = tr('Reset'), callback = function()
+            close()
+            send('reset:talent')
+        end },
+        { text = tr('Cancel'), callback = close },
+        anchor = AnchorHorizontalCenter
+    }, close, close)
+end
+
+-- drag the canvas to move the tree, mouse wheel to zoom around the pointer
+local function setupCanvas()
+    local canvas = talentsWindow.canvas
+    canvas:setDraggable(true)
+    canvas.onDragEnter = function(self, mousePos)
+        state.drag = { x = mousePos.x, y = mousePos.y }
+        return true
+    end
+    canvas.onDragMove = function(self, mousePos)
+        local tree = state.drawn
+        if not state.drag or not tree then
+            return false
+        end
+        local offset = state.offset[tree]
+        offset.x = offset.x + mousePos.x - state.drag.x
+        offset.y = offset.y + mousePos.y - state.drag.y
+        state.drag = { x = mousePos.x, y = mousePos.y }
+        reposition()
+        return true
+    end
+    canvas.onDragLeave = function()
+        state.drag = nil
+        return true
+    end
+    canvas.onMouseWheel = function(self, mousePos, direction)
+        local tree = state.drawn
+        if not tree then
+            return false
+        end
+        local old = state.cell[tree]
+        local new = math.max(MIN_CELL, math.min(MAX_CELL, old + (direction == MouseWheelUp and 2 or -2)))
+        if new == old then
+            return true
+        end
+        -- keep the point under the mouse where it is
+        local rect = self:getRect()
+        local px, py = mousePos.x - rect.x, mousePos.y - rect.y
+        local offset = state.offset[tree]
+        offset.x = px - (px - offset.x) * new / old
+        offset.y = py - (py - offset.y) * new / old
+        state.cell[tree] = new
+        reposition()
+        return true
+    end
 end
 
 function show()
     talentsWindow:show()
     talentsWindow:raise()
     talentsWindow:focus()
-    open(currentTree)
+    open(state.tree)
 end
 
 function hide()
@@ -178,14 +335,19 @@ end
 
 local function reset()
     hide()
+    state.layouts, state.states, state.offset, state.drawn = {}, {}, {}, nil
+    state.nodeWidgets, state.linkWidgets = {}, {}
     if talentsWindow then
-        talentsWindow.canvas:destroyChildren()
+        for _, child in ipairs(talentsWindow.canvas:getChildren()) do
+            child:destroy()
+        end
     end
 end
 
 function init()
     talentsWindow = g_ui.displayUI('talents')
     talentsWindow:hide()
+    setupCanvas()
     ProtocolGame.registerExtendedJSONOpcode(OPCODE, onMessage)
     connect(g_game, { onGameEnd = reset })
     talentsButton = modules.game_mainpanel.addToggleButton('talentsButton', tr('Talents'),
