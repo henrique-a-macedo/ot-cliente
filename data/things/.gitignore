@@ -1,3 +1,7 @@
 *
 !.gitignore
 !README.md
+# os assets 13.10 da equipe ficam no git: o editor (Estúdio) grava folhas e o appearances aqui, e o
+# launcher publica esta pasta. As outras versões continuam fora.
+!1310/
+!1310/**

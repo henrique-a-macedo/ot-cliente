@@ -8,3 +8,5 @@
 *.otmm binary
 *.cpp eol=lf 
 *.h   eol=lf 
+# assets do cliente (data/things/1310): bytes exatos, o hash do nome e do catalog-content.json precisa bater
+data/things/1310/** binary
