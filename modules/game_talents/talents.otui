@@ -1,36 +1,31 @@
+// one talent: a round (or rounded square) sprite; the fill is the image, the ring is the icon, both tinted from Lua
 TalentNode < UIButton
-  size: 92 46
-  background-color: #1e1e1e
-  border-width: 2
-  border-color: #4a4a4a
-  font: verdana-11px-rounded
-  color: #dfdfdf
-  text-wrap: true
+  size: 12 12
+  image-smooth: true
   text-align: center
-  text-offset: 0 -6
+  font: verdana-9px-rounded
+  color: #101010
 
-  $hover:
-    background-color: #2a2a2a
-
-  Label
-    id: rank
-    anchors.bottom: parent.bottom
-    anchors.horizontalCenter: parent.horizontalCenter
-    margin-bottom: 3
-    font: verdana-9px-rounded
-    color: #a0a0a0
-    text-auto-resize: true
-    phantom: true
-
-// a straight piece of a connector line between two nodes
+// a straight connector between two nodes, rotated to the angle between them (pivot at its center)
 TalentLink < UIWidget
-  background-color: #5a5a5a
+  height: 2
+  background-color: #4a4556
+  phantom: true
+
+// one dash of a level-band hexagon
+TalentDash < UIWidget
+  height: 2
+  phantom: true
+
+TalentBandLabel < Label
+  size: 120 14
+  text-align: center
   phantom: true
 
 MainWindow
   id: talentsWindow
   !text: tr('Talents')
-  size: 590 560
+  size: 760 600
   visible: false
   @onEscape: modules.game_talents.hide()
 
@@ -51,11 +46,36 @@ MainWindow
     margin-left: 4
     @onClick: modules.game_talents.open('paragon')
 
+  Button
+    id: centerButton
+    !text: tr('Center')
+    width: 60
+    anchors.top: parent.top
+    anchors.left: paragonTab.right
+    margin-left: 12
+    @onClick: modules.game_talents.center()
+
   Label
     id: points
     anchors.verticalCenter: talentTab.verticalCenter
     anchors.right: parent.right
     color: #8fd18f
+    text-auto-resize: true
+
+  Label
+    id: classPoints
+    anchors.verticalCenter: talentTab.verticalCenter
+    anchors.right: points.left
+    margin-right: 16
+    color: #9c86ff
+    text-auto-resize: true
+
+  Label
+    id: keystones
+    anchors.verticalCenter: talentTab.verticalCenter
+    anchors.right: classPoints.left
+    margin-right: 16
+    color: #d8b03c
     text-auto-resize: true
 
   UIWidget
@@ -69,15 +89,36 @@ MainWindow
     background-color: #00000055
     border-width: 1
     border-color: #2a2a2a
+    clipping: true
+
+  Label
+    id: hint
+    !text: tr('Drag to move, mouse wheel to zoom.')
+    anchors.bottom: canvas.bottom
+    anchors.left: canvas.left
+    margin-left: 6
+    margin-bottom: 4
+    color: #808080
+    text-auto-resize: true
+    phantom: true
 
   Label
     id: resultLabel
     anchors.left: parent.left
-    anchors.right: closeButton.left
+    anchors.right: resetButton.left
     anchors.bottom: parent.bottom
     margin-right: 6
     height: 20
     text-wrap: true
+
+  Button
+    id: resetButton
+    !text: tr('Reset')
+    width: 110
+    anchors.right: closeButton.left
+    anchors.bottom: parent.bottom
+    margin-right: 6
+    @onClick: modules.game_talents.askReset()
 
   Button
     id: closeButton
